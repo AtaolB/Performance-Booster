@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Runs on the .NET 10 Desktop Runtime. The released download is PerformanceBooster.Launcher, which installs the runtime
+       on first start when it is missing and then puts this exe in its place. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <UseWPF>true</UseWPF>
+    <!-- Only for the tray icon (NotifyIcon). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Source-generated P/Invoke (LibraryImport) passes pointers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <AssemblyName>PerformanceBooster</AssemblyName>
+    <RootNamespace>PerformanceBooster</RootNamespace>
+    <Product>Performance Booster</Product>
+    <AssemblyTitle>Performance Booster</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <SatelliteResourceLanguages>en;tr</SatelliteResourceLanguages>
+    <!-- DPI awareness comes from the manifest, which WPF reads; the WinForms tray icon follows it. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <!-- One exe that uses the installed runtime instead of carrying one. Not ReadyToRun: precompiling doubled the exe
+         (2.0 to 4.3 MB) for about 50 ms of a 1 s start, as WPF and .NET themselves come precompiled with the runtime. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- JSON goes only through the generated serializers (Core/AppJson.cs); a type left out fails in the tests, not slowly. -->
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+
+  <!-- The released exe runs as administrator. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <ApplicationManifest>app.admin.manifest</ApplicationManifest>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The icon is only in the exe (ApplicationIcon): windows show it by default, the tray icon reads it from there. -->
+    <Resource Include="Assets\logo.png" />
+    <!-- UI languages: Languages.<code>.json inside the exe (see Core/L.cs). -->
+    <EmbeddedResource Include="Languages\*.json" LogicalName="Languages.%(Filename)%(Extension)" />
+    <!-- Version notes (see Core/Changelog.cs). -->
+    <EmbeddedResource Include="..\CHANGELOG.md" LogicalName="Changelog.en.md" Link="Changelog\CHANGELOG.md" WithCulture="false" />
+    <EmbeddedResource Include="..\CHANGELOG.tr.md" LogicalName="Changelog.tr.md" Link="Changelog\CHANGELOG.tr.md" WithCulture="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WPF projects do not add System.IO to implicit usings; WinForms and System.Drawing names clash with WPF. -->
+    <Using Include="System.IO" />
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <Using Include="PerformanceBooster.Core.L" Static="true" />
+    <InternalsVisibleTo Include="PerformanceBooster.Tests" />
+  </ItemGroup>
+
+</Project>

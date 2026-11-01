@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The released download (PerformanceBooster.exe). It needs nothing installed: when the .NET 10 Desktop Runtime is missing it
+       asks, installs it from Microsoft and then puts the app it carries (the exe of PerformanceBooster.csproj, compressed inside) in
+       its own place and starts it. Build: dotnet publish PerformanceBooster.Launcher -c Release -o out
+       Without the C++ build tools it is a trimmed, compressed single file; the release build adds -p:PublishAot=true (native,
+       a few MB smaller). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>PerformanceBooster</AssemblyName>
+    <RootNamespace>PerformanceBooster.Launcher</RootNamespace>
+    <Product>Performance Booster</Product>
+    <AssemblyTitle>Performance Booster</AssemblyTitle>
+    <Version>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\PerformanceBooster\PerformanceBooster.csproj')), '&lt;Version&gt;([^&lt;]+)&lt;/Version&gt;').Groups[1].Value)</Version>
+    <ApplicationIcon>..\PerformanceBooster\Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <IsAotCompatible>true</IsAotCompatible>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebuggerSupport>false</DebuggerSupport>
+    <EventSourceSupport>false</EventSourceSupport>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(PublishAot)' != 'true'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <OptimizationPreference>Size</OptimizationPreference>
+    <StackTraceSupport>false</StackTraceSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WithCulture: ".tr." in the name would otherwise send it to a Turkish satellite assembly. -->
+    <EmbeddedResource Include="Texts.tr.txt" LogicalName="Texts.tr.txt" WithCulture="false" />
+  </ItemGroup>
+
+  <!-- On publish: the app is published as its own single exe (runtime-dependent), compressed and embedded. -->
+  <Target Name="EmbedApp" BeforeTargets="BeforeBuild" Condition="'$(_IsPublishing)' == 'true'">
+    <PropertyGroup>
+      <_AppProject>$(MSBuildThisFileDirectory)..\PerformanceBooster\PerformanceBooster.csproj</_AppProject>
+      <_AppDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'app'))</_AppDir>
+      <_AppPacked>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)app.bin</_AppPacked>
+      <_AppProperties>Configuration=$(Configuration);PublishDir=$(_AppDir);_IsPublishing=true</_AppProperties>
+      <_LauncherProperties>RuntimeIdentifier;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;TrimMode;OptimizationPreference;StackTraceSupport</_LauncherProperties>
+    </PropertyGroup>
+    <RemoveDir Directories="$(_AppDir)" />
+    <MSBuild Projects="$(_AppProject)" Targets="Restore" Properties="$(_AppProperties);_RestoreSession=$([System.Guid]::NewGuid())" RemoveProperties="$(_LauncherProperties)" />
+    <MSBuild Projects="$(_AppProject)" Targets="Publish" Properties="$(_AppProperties)" RemoveProperties="$(_LauncherProperties)" />
+    <DeflateFile Source="$(_AppDir)PerformanceBooster.exe" Destination="$(_AppPacked)" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(_AppPacked)" LogicalName="app.bin" WithCulture="false" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Plain Deflate: unpacking it needs only DeflateStream, which keeps this exe smaller than a zip reader would. -->
+  <UsingTask TaskName="DeflateFile" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Source ParameterType="System.String" Required="true" />
+      <Destination ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.IO.Compression" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        using (var input = File.OpenRead(Source))
+        using (var output = File.Create(Destination))
+        using (var deflate = new DeflateStream(output, CompressionLevel.Optimal))
+            input.CopyTo(deflate);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+</Project>

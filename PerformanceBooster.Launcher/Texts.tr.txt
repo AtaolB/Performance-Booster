@@ -1,0 +1,11 @@
+# Turkish texts of the launcher: English text, a tab, the translation. \n is a line break.
+Performance Booster needs the .NET 10 Desktop Runtime from Microsoft (about 60 MB).\n\nDownload and install it now? It is installed once, then the app opens.	Performance Booster, Microsoft'un .NET 10 Masaüstü Çalışma Zamanı'na ihtiyaç duyuyor (yaklaşık 60 MB).\n\nŞimdi indirilip kurulsun mu? Bir kez kurulur, ardından uygulama açılır.
+Downloading the .NET 10 Desktop Runtime…	.NET 10 Masaüstü Çalışma Zamanı indiriliyor…
+{0} MB of {1} MB	{0} MB / {1} MB
+{0} MB	{0} MB
+The download failed: {0}	İndirme başarısız oldu: {0}
+The downloaded file is not signed by Microsoft, so it was not run.	İndirilen dosya Microsoft imzalı değil, bu yüzden çalıştırılmadı.
+The installation did not finish (code {0}).	Kurulum tamamlanmadı (kod {0}).
+The .NET 10 Desktop Runtime is still missing after the installation.	Kurulumdan sonra .NET 10 Masaüstü Çalışma Zamanı hâlâ yok.
+You can install it yourself from {0} and start Performance Booster again.	{0} adresinden kendin kurup Performance Booster'ı yeniden başlatabilirsin.
+Performance Booster could not be started: {0}	Performance Booster başlatılamadı: {0}

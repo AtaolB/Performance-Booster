@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="PerformanceBooster.Tests/PerformanceBooster.Tests.csproj" />
+  <Project Path="PerformanceBooster/PerformanceBooster.csproj" />
+  <Project Path="PerformanceBooster.Launcher/PerformanceBooster.Launcher.csproj" />
+</Solution>
