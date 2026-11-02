@@ -20,7 +20,7 @@
     <RootNamespace>PerformanceBooster</RootNamespace>
     <Product>Performance Booster</Product>
     <AssemblyTitle>Performance Booster</AssemblyTitle>
-    <Version>1.0.2</Version>
+    <Version>1.1.0</Version>
     <SatelliteResourceLanguages>en;tr</SatelliteResourceLanguages>
     <!-- DPI awareness comes from the manifest, which WPF reads; the WinForms tray icon follows it. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
@@ -38,7 +38,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Management" Version="10.0.0" />
+    <PackageReference Include="System.Management" Version="10.0.2" />
+    <!-- Hardware sensors (Sensors tab). Processor, motherboard and fan sensors go through the PawnIO driver when it is installed. -->
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+    <!-- Only used on Linux and macOS; its native helpers would sit next to the single-file exe. -->
+    <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" ExcludeAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

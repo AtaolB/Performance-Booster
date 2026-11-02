@@ -20,7 +20,7 @@ public sealed partial class MainViewModel
         double cpu = Wander(ref _demoCpu, 6, 28, 6);
         _cpuHistory.Add(cpu);
         CpuText = Pct(cpu);
-        CpuSub = "4.90 GHz · " + F("{0} thread|{0} threads", Demo.Threads);
+        CpuSub = "68°C · 4.90 GHz · " + F("{0} thread|{0} threads", Demo.Threads);
         CpuSeries = _cpuHistory.Snapshot();
 
         double used = 11.8 + _demoRandom.NextDouble() * 0.2;
@@ -40,7 +40,7 @@ public sealed partial class MainViewModel
         double disk = _demoRandom.NextDouble() < 0.15 ? 6 + _demoRandom.NextDouble() * 10 : _demoRandom.NextDouble() * 2;
         _diskHistory.Add(disk);
         DiskText = Pct(disk);
-        DiskSub = F("{0} MB/s", (disk * 0.9).ToString("0.0", L.Culture));
+        DiskSub = F("{0} MB/s", (disk * 0.9).ToString("0.0", L.Culture)) + " · 41°C";
         DiskSeries = _diskHistory.Snapshot();
 
         double down = Wander(ref _demoNet, 0.5, 9, 3);
@@ -48,9 +48,6 @@ public sealed partial class MainViewModel
         NetText = $"{down.ToString("0.0", L.Culture)} Mbps";
         NetSub = F("Upload {0} Mbps", (down / 6).ToString("0.0", L.Culture)) + " · Ethernet 1 Gbps";
         NetSeries = _netHistory.Snapshot();
-
-        foreach (var row in Pings)
-            row.Add(row.Target.Kind == PingKind.Gateway ? 1 + (_demoRandom.NextDouble() < 0.2 ? 1 : 0) : 8 + Math.Round(_demoRandom.NextDouble() * 3));
 
         if (SelectedTab == TabProcesses && _tick % 2 == 0) DemoProcesses();
         if (SelectedTab == TabGame) RefreshGameBoost();

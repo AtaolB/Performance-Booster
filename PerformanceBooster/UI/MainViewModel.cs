@@ -12,14 +12,15 @@ namespace PerformanceBooster.UI;
 // Live monitoring stops while the window is hidden/minimized; game mode and update checks keep running.
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
-    public const int TabLive = 0, TabUpdates = 1, TabPrograms = 2, TabTweaks = 3, TabNetwork = 4, TabGame = 5, TabStartup = 6, TabSystem = 7, TabProcesses = 8;
+    public const int TabLive = 0, TabIssues = 1, TabUpdates = 3, TabPrograms = 4, TabTweaks = 5, TabNetwork = 6, TabGame = 7, TabStartup = 8, TabSystem = 9, TabProcesses = 10;
 
     static string HeatHint => GameSession.HeatHint;
 
     sealed record IssueData(string Key, Brush Severity, string Title, string Detail, string Suggestion,
-        string? TweakId = null, string? Uri = null, int? Tab = null, string? TabLabel = null);
+        string? TweakId = null, string? Uri = null, int? Tab = null, string? TabLabel = null, IssueGroup Group = IssueGroup.Now);
 
     readonly DispatcherTimer _liveTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    readonly DispatcherTimer _cardTimer = new(); // the Live cards and the app list, at the interval chosen on the Live tab
     readonly DispatcherTimer _backgroundTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     readonly CpuSampler _cpu = new();
     readonly Lazy<CounterSampler> _counters = new(() => new CounterSampler());
@@ -27,17 +28,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     readonly GpuMonitor _nvidia = new();
     readonly ProcessSampler _processSampler = new();
     readonly History _cpuHistory = new(60), _ramHistory = new(60), _gpuHistory = new(60), _diskHistory = new(60), _netHistory = new(60), _diskBusy = new(15);
-    readonly PingRow _gateway;
 
     NetworkInterface? _activeNic;
     volatile GpuSample? _nvidiaSample;
     List<ProcessUsage> _top = [];
-    bool _processBusy, _visible = true;
+    bool _processBusy, _visible = true, _active = true;
     int _tick;
-    double _ramPercent, _downMbps, _upMbps;
+    double _ramPercent, _downMbps, _upMbps, _cpuNow;
+    DateTime _tempsAt, _diskTempAt;
 
-    public ObservableCollection<PingRow> Pings { get; } = [];
     public ObservableCollection<IssueRow> Issues { get; } = [];
+
+    // The Issues tab: the issues by where they are solved, and the hardware notes (BIOS, memory modules) last.
+    public IReadOnlyList<IssueSection> IssueSections { get; } = [.. Enum.GetValues<IssueGroup>().Select(g => new IssueSection(g))];
 
     public ICommand OpenUriCommand { get; }
     public ICommand ToggleLanguageCommand { get; }
@@ -78,13 +81,21 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             if (!Set(ref _issueCount, value)) return;
             Raise(nameof(HasIssues));
+            Raise(nameof(NoIssues));
+            Raise(nameof(IssuesTabTitle));
+            Raise(nameof(IssuesSummary));
             Raise(nameof(StatusTooltip));
             CommandManager.InvalidateRequerySuggested();
         }
     }
 
     public bool HasIssues => IssueCount > 0;
-    public string? StatusTooltip => HasIssues ? T("Show the issues on the Live tab") : null;
+    public bool NoIssues => IssueCount == 0;
+    public string IssuesTabTitle => IssueCount > 0 ? F("Issues ({0})", IssueCount) : T("Issues");
+    public string IssuesSummary => IssueCount == 0
+        ? T("No issues right now.")
+        : F("{0} issue found, grouped by where it is solved.|{0} issues found, grouped by where they are solved.", IssueCount);
+    public string? StatusTooltip => HasIssues ? T("Show the issues") : null;
     public ICommand ShowIssuesCommand { get; }
     public string LanguageButton => L.Next.Code.ToUpperInvariant();
     public string LanguageTooltip => L.Next.SwitchTo; // written in the target language
@@ -98,12 +109,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel()
     {
         _activeNic = NetInfo.Active();
-        _gateway = new PingRow(new PingTarget(T("Router"), Demo.On ? Demo.Router : _activeNic is null ? "" : NetInfo.Gateway(_activeNic) ?? "", PingKind.Gateway));
-        Pings.Add(_gateway);
-        RefreshPingTargets();
 
         OpenUriCommand = new RelayCommand(p => { if (p is string uri) Shell.Open(uri); });
-        ShowIssuesCommand = new RelayCommand(_ => SelectedTab = TabLive, _ => HasIssues);
+        ShowIssuesCommand = new RelayCommand(_ => SelectedTab = TabIssues, _ => HasIssues);
         ToggleLanguageCommand = new RelayCommand(_ =>
         {
             if (Busy || Updating) { Message = T("The language can be changed when the running operation finishes."); return; }
@@ -119,10 +127,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         InitLatency();
         InitProcesses();
         InitPrograms();
-        InitDetail();
+        InitLiveApps();
+        InitSensors();
 
         _nvidia.Sampled += s => _nvidiaSample = s;
         _liveTimer.Tick += (_, _) => Tick();
+        _cardTimer.Tick += (_, _) => SampleCards();
         _backgroundTimer.Tick += (_, _) => TickBackground();
         _backgroundTimer.Start();
         Resume();
@@ -141,24 +151,41 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         else Pause();
     }
 
+    // The window is in front: the Live and Sensors tabs read only then (and not while a game runs).
+    public void SetActive(bool active)
+    {
+        if (_active == active) return;
+        _active = active;
+        if (active && _visible)
+        {
+            StartSensors();
+            StartLiveApps();
+        }
+    }
+
+    bool ReadingAllowed => Demo.On || (_visible && _active && _watcher.ActiveGame is null);
+
     void Resume()
     {
         if (!Demo.On) _nvidia.Start();
         _cpu.Sample(); // so the time spent hidden does not distort the first sample
         _liveTimer.Start();
+        _cardTimer.Start();
+        StartSensors();
+        StartLiveApps();
         _ = RefreshTweaksAsync();
-        if (IsDetailNet && _settings.NetMonitorAllowed) _ = StartNetMonitorAsync();
     }
 
     void Pause()
     {
         _liveTimer.Stop();
+        _cardTimer.Stop();
         if (_session is null) // a running game keeps the graphics card values coming
         {
             _nvidia.Stop();
             _nvidiaSample = null;
         }
-        _netMonitor.Stop(); // the elevated network monitor does not run while hidden
+        StopLiveApps(); // the elevated network monitor does not run while hidden
     }
 
     // Every 3 s: the timer, game mode, the mouse and a pending app update; every 5 min: record running programs (for the last-used info).
@@ -170,6 +197,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         TimerResolution.Apply(_settings); // tries again if Windows refused it
         TickGameWatcher();
         CheckMouse();
+        CheckTemperaturesInBackground();
         TryAutoInstallSelfUpdate();
         if (_backgroundTick % 100 == 10) _ = Task.Run(UsageHistory.RecordRunning);
         if (_backgroundTick % 100 == 50) _ = KeepDevicePowerSavingOffAsync();
@@ -184,12 +212,32 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
         _tick++;
+        if (_tick % 5 == 0) _activeNic = NetInfo.Active();
 
+        // The process lists are expensive: the full one only while its tab is open, the top users when needed for a RAM/CPU warning.
+        // While a game runs, they and the regular settings check wait, so an open window costs the game nothing.
+        bool gaming = _watcher.ActiveGame is not null;
+        if (gaming && SelectedTab == TabProcesses) ProcessSummary = PausedText;
+        if (!gaming && SelectedTab == TabProcesses && _tick % 2 == 0) _ = RefreshProcessManagerAsync();
+        if (!gaming && (_ramPercent >= 85 || _cpuNow >= 90) && _tick % 3 == 0) _ = RefreshProcessesAsync();
+        if (!gaming && _tick % 30 == 0) _ = RefreshTweaksAsync();
+        if (SelectedTab == TabGame) RefreshGameBoost();
+        UpdateIssues();
+    }
+
+    // The Live cards (and the app list under them) at the chosen interval; nothing is read while a game runs or the window
+    // is behind another one.
+    void SampleCards()
+    {
+        if (Demo.On || !ReadingAllowed) return;
         var cpu = _cpu.Sample();
+        _cpuNow = cpu;
         var counters = _counters.Value.Sample();
+        _cpuMhz = counters.CpuMhz;
         _cpuHistory.Add(cpu);
         CpuText = Pct(cpu);
-        CpuSub = (double.IsNaN(counters.CpuMhz) ? "" : (counters.CpuMhz / 1000).ToString("0.00", L.Culture) + " GHz · ") + F("{0} thread|{0} threads", Environment.ProcessorCount);
+        CpuSub = (_cpuTemp is null ? "" : Celsius(_cpuTemp) + " · ") + (double.IsNaN(counters.CpuMhz) ? "" : (counters.CpuMhz / 1000).ToString("0.00", L.Culture) + " GHz · ")
+                 + F("{0} thread|{0} threads", Environment.ProcessorCount);
         CpuSeries = _cpuHistory.Snapshot();
 
         var (used, total, percent) = SystemInfo.Memory();
@@ -205,37 +253,17 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _diskHistory.Add(disk);
         _diskBusy.Add(disk);
         DiskText = double.IsNaN(counters.DiskActivePercent) ? "–" : Pct(disk);
-        DiskSub = double.IsNaN(counters.DiskMBps) ? "" : F("{0} MB/s", counters.DiskMBps.ToString("0.0", L.Culture));
+        DiskSub = string.Join(" · ", new[] { double.IsNaN(counters.DiskMBps) ? "" : F("{0} MB/s", counters.DiskMBps.ToString("0.0", L.Culture)), Celsius(_diskTemp) }.Where(s => s.Length > 0));
         DiskSeries = _diskHistory.Snapshot();
 
-        if (_tick % 5 == 0) _activeNic = NetInfo.Active();
         (_downMbps, _upMbps) = _net.Sample(_activeNic);
         _netHistory.Add(_downMbps);
         NetText = $"{_downMbps.ToString("0.0", L.Culture)} Mbps";
         NetSub = F("Upload {0} Mbps", _upMbps.ToString("0.0", L.Culture)) + " · " + (_activeNic is null ? T("no connection") : $"{_activeNic.Name} {LinkSpeed(_activeNic.Speed)}");
         NetSeries = _netHistory.Snapshot();
 
-        foreach (var row in Pings) _ = row.SampleAsync();
-
-        // The process lists are expensive: the full one only while its tab is open, the top users when needed for a RAM/CPU warning.
-        // While a game runs, they and the regular settings check wait, so an open window costs the game nothing.
-        bool gaming = _watcher.ActiveGame is not null;
-        if (gaming && SelectedTab == TabProcesses) ProcessSummary = PausedText;
-        if (!gaming && SelectedTab == TabProcesses && _tick % 2 == 0) _ = RefreshProcessManagerAsync();
-        if (!gaming && (_ramPercent >= 85 || cpu >= 90) && _tick % 3 == 0) _ = RefreshProcessesAsync();
-        if (!gaming && _tick % 30 == 0) _ = RefreshTweaksAsync();
-        if (SelectedTab == TabGame) RefreshGameBoost();
-        if (HasDetail && SelectedTab == TabLive && _tick % 2 == 0)
-        {
-            if (gaming) DetailNote = PausedText;
-            else
-            {
-                if (DetailNote == PausedText && Detail is { } kind) DetailNote = Note(kind);
-                if (IsDetailNet) RaiseNetMonitorState();
-                _ = RefreshDetailAsync();
-            }
-        }
-        UpdateIssues();
+        ReadTemperaturesForLive();
+        if (SelectedTab == TabLive) _ = RefreshLiveAppsAsync();
     }
 
     static string PausedText => T("Paused while a game runs.");
@@ -255,7 +283,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         else
         {
             GpuName = PrimaryGpuName;
-            GpuSub = double.IsNaN(counters.GpuMemoryGb) ? "" : F("VRAM {0} GB in use", counters.GpuMemoryGb.ToString("0.0", L.Culture));
+            GpuSub = string.Join(" · ", new[] { Celsius(_gpuTemp), double.IsNaN(counters.GpuMemoryGb) ? "" : F("VRAM {0} GB in use", counters.GpuMemoryGb.ToString("0.0", L.Culture)) }.Where(s => s.Length > 0));
         }
     }
 
@@ -322,41 +350,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         if (!Demo.On && Catalog.Nic is { IsEthernet: true, SupportsGigabit: true } nic && nic.SpeedBps is > 0 and < 1_000_000_000)
             found.Add(new("live.link", Palette.Warn, F("Ethernet is linked at {0} Mbps", nic.SpeedBps / 1_000_000), F("{0} supports gigabit.", nic.Description),
-                T("If the adapter's power saving settings are off, the cause is most likely the cable or the router port: try a Cat5e/Cat6 cable, try another router port and check the connectors. If your internet plan is faster than 100 Mbps, it is capped here.")));
-
-        bool busyLine = _downMbps >= 20 || _upMbps >= 10;
-        string lineNote = busyLine
-            ? " " + F("There is background network traffic right now (↓{0} / ↑{1} Mbps): pause Steam, Windows Update or torrent downloads.", _downMbps.ToString("0", L.Culture), _upMbps.ToString("0", L.Culture))
-            : "";
-        foreach (var row in Pings)
-        {
-            var t = row.Target;
-            if (t.Samples < 10) continue;
-            string key = $"live.ping.{t.Name}.{t.Host}";
-            if (double.IsNaN(t.Average))
-            {
-                found.Add(new(key + ".down", Palette.Bad, F("{0} ({1}) is not responding", t.Name, t.Host), "", T("Check the internet connection and the cable.")));
-                continue;
-            }
-            string stats = F("avg {0} ms · {1}–{2} ms · jitter {3} ms · loss {4}", t.Average.ToString("0.0", L.Culture), t.Min.ToString("0"), t.Max.ToString("0"), t.Jitter.ToString("0.0", L.Culture), Pct(t.LossPercent));
-            if (t.Kind == PingKind.Gateway)
-            {
-                if (t.LossPercent > 0 || t.Average >= 5 || t.Jitter >= 3)
-                    found.Add(new(key, Palette.Bad, T("Local network problem (between the computer and the router)"), stats,
-                        T("Check the cable and the router port. If you use Wi-Fi, switch to a cable or move closer to the router. Restart the router.") + lineNote));
-                continue;
-            }
-            if (t.LossPercent >= 2)
-                found.Add(new(key + ".loss", Palette.Bad, F("Packet loss: {0} {1}", t.Name, Pct(t.LossPercent)), stats,
-                    T("If the router side is clean, the problem may be the line. Restart the router; if it continues, ask your provider to check the line.") + lineNote));
-            if (t.Jitter >= 5)
-                found.Add(new(key + ".jitter", Palette.Warn, F("Ping is fluctuating: {0} (jitter {1} ms)", t.Name, t.Jitter.ToString("0.0", L.Culture)), stats,
-                    busyLine ? lineNote.Trim() : T("If it happens while someone at home downloads or streams, run the load test on the Network tab (bufferbloat)."),
-                    Tab: TabNetwork, TabLabel: T("Go to network test")));
-            if (t.Average >= 60)
-                found.Add(new(key + ".high", Palette.Warn, F("High ping: {0} {1} ms", t.Name, t.Average.ToString("0")), stats,
-                    T("This can be normal if the server is far away. Pick the closest region in the game.") + lineNote));
-        }
+                T("If the adapter's power saving settings are off, the cause is most likely the cable or the router port: try a Cat5e/Cat6 cable, try another router port and check the connectors. If your internet plan is faster than 100 Mbps, it is capped here."), Group: IssueGroup.Network));
 
         if (_nvidiaSample is { } g)
         {
@@ -371,64 +365,73 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             found.Add(new($"irq.{shared.Irq}", Palette.Warn, F("Devices share the interrupt line IRQ {0}", shared.Irq),
                 string.Join(", ", shared.Devices.Select(d => d.Name).Distinct()),
                 T("Devices on a shared line wait for each other. Turn on MSI mode for them on the Settings tab (Interrupts (MSI)) and restart."),
-                Tab: TabTweaks, TabLabel: T("Go to Settings")));
+                Tab: TabTweaks, TabLabel: T("Go to Settings"), Group: IssueGroup.Settings));
         foreach (var port in _mice.Where(m => m.ThirdParty))
             found.Add(new("mouse.port", Palette.Warn, F("The mouse is on an add-on USB controller ({0})", Devices.VendorName(port.Vendor) ?? port.Controller ?? "?"),
                 $"{port.Mouse} · {port.Controller}",
                 T("Add-on USB chips usually add latency and jitter compared with the processor's or chipset's own controller. Try the other rear ports and check the result with the polling test on the Latency tab."),
-                Tab: TabLatency, TabLabel: T("Go to Latency")));
+                Tab: TabLatency, TabLabel: T("Go to Latency"), Group: IssueGroup.Devices));
 
         if (MouseNeedsFix && _mouse is { } mouse)
             found.Add(new(MouseIssueId, Palette.Warn,
                 mouse.Acceleration ? T("Mouse acceleration is on") : F("Pointer speed is {0}, not {1}", mouse.Speed, MouseSettings.RecommendedSpeed),
                 MouseStatusText,
                 F("For consistent aim, turn off Enhance pointer precision and use pointer speed {0} (Windows default); set the sensitivity in the game. Fix keeps them this way from now on.", MouseSettings.RecommendedSpeed),
-                MouseIssueId));
+                MouseIssueId, Group: IssueGroup.Settings));
 
         // High-impact settings one by one, the others in a single line (mouse acceleration has its own issue above).
         var problems = Tweaks.Where(t => t.State == CheckState.Problem && t.Id != "input.mouseaccel").ToList();
         foreach (var t in problems.Where(t => t.Tweak.Impact == Impact.High))
-            found.Add(new("tweak." + t.Id, Palette.Bad, t.Title, F("Current: {0} · recommended: {1}", t.CurrentLabel, t.Recommended?.Label), t.Description, t.Id));
+            found.Add(new("tweak." + t.Id, Palette.Bad, t.Title, F("Current: {0} · recommended: {1}", t.CurrentLabel, t.Recommended?.Label), t.Description, t.Id, Group: IssueGroup.Settings));
         int rest = problems.Count(t => t.Tweak.Impact != Impact.High);
         if (rest > 0)
             found.Add(new("tweak.rest", Palette.Warn, F("{0} setting is not at the recommended value|{0} settings are not at the recommended value", rest),
                 string.Join(", ", problems.Where(t => t.Tweak.Impact != Impact.High).Take(4).Select(t => t.Title)) + (rest > 4 ? "…" : ""),
-                T("On the Settings tab you can change them one by one or set all of them to the recommended value."), Tab: TabTweaks, TabLabel: T("Go to Settings")));
+                T("On the Settings tab you can change them one by one or set all of them to the recommended value."), Tab: TabTweaks, TabLabel: T("Go to Settings"), Group: IssueGroup.Settings));
 
         if (UpdatableCount > 0)
             found.Add(new("updates.apps", Palette.Warn, F("{0} app has an update|{0} apps have updates", UpdatableCount),
                 string.Join(", ", Packages.Take(4).Select(p => p.Name)) + (UpdatableCount > 4 ? "…" : ""),
-                T("On the Updates tab you can update them one by one or all at once."), Tab: TabUpdates, TabLabel: T("Go to Updates")));
+                T("On the Updates tab you can update them one by one or all at once."), Tab: TabUpdates, TabLabel: T("Go to Updates"), Group: IssueGroup.Updates));
         if (Drivers.Count > 0)
             found.Add(new("updates.drivers", Palette.Warn, F("{0} driver update available (Windows Update)|{0} driver updates available (Windows Update)", Drivers.Count),
                 string.Join(", ", Drivers.Take(3).Select(d => d.Title)) + (Drivers.Count > 3 ? "…" : ""),
-                T("You can install them from the driver list at the bottom of the Updates tab."), Tab: TabUpdates, TabLabel: T("Go to Updates")));
+                T("You can install them from the driver list at the bottom of the Updates tab."), Tab: TabUpdates, TabLabel: T("Go to Updates"), Group: IssueGroup.Updates));
 
         foreach (var info in SystemItems.Where(i => i.Item.State == CheckState.Problem))
             found.Add(new("info." + info.Group + info.Label, Palette.Warn, $"{info.Label}: {info.Value}", info.Group, info.Hint ?? "", Uri: info.Uri,
-                Tab: info.Uri is null ? TabSystem : null, TabLabel: info.Uri is null ? T("Go to System") : null));
+                Tab: info.Uri is null ? TabSystem : null, TabLabel: info.Uri is null ? T("Go to System") : null, Group: IssueGroup.System));
+        // Done in the BIOS or with the hardware itself (memory profile, Resizable BAR, modules, slots): notes, not issues.
+        foreach (var info in SystemItems.Where(i => i.Item.Note && i.Hint is not null))
+            found.Add(new("note." + info.Group + info.Label, Palette.Info, $"{info.Label}: {info.Value}", info.Group, info.Hint!, Group: IssueGroup.Hardware));
 
         SyncIssues(found);
-        IssueCount = found.Count;
+        int count = found.Count(f => f.Group != IssueGroup.Hardware);
+        IssueCount = count;
 
         if (Busy) return;
-        StatusText = found.Count == 0 ? T("No issues") : F("{0} issue|{0} issues", found.Count);
-        StatusBrush = found.Count == 0 ? Palette.Ok : found.Any(f => f.Severity == Palette.Bad) ? Palette.Bad : Palette.Warn;
+        StatusText = count == 0 ? T("No issues") : F("{0} issue|{0} issues", count);
+        StatusBrush = count == 0 ? Palette.Ok : found.Any(f => f.Severity == Palette.Bad) ? Palette.Bad : Palette.Warn;
     }
 
+    // Rows are kept between checks; each one also sits in the section of its group.
     void SyncIssues(List<IssueData> found)
     {
-        var keys = found.Select(f => f.Key).ToHashSet();
+        var keys = found.Where(f => f.Group != IssueGroup.Hardware).Select(f => f.Key).ToHashSet();
         for (int i = Issues.Count - 1; i >= 0; i--)
             if (!keys.Contains(Issues[i].Key)) Issues.RemoveAt(i);
+        foreach (var section in IssueSections) section.Sync(found.Where(f => f.Group == section.Group).Select(f => f.Key));
         foreach (var f in found)
         {
-            var row = Issues.FirstOrDefault(r => r.Key == f.Key);
+            var section = IssueSections.First(s => s.Group == f.Group);
+            var row = section.Rows.FirstOrDefault(r => r.Key == f.Key);
             if (row is null)
             {
                 row = new IssueRow(f.Key);
-                Issues.Add(row);
+                section.Rows.Add(row);
+                section.RaiseRows();
             }
+            if (f.Group != IssueGroup.Hardware && !Issues.Contains(row)) Issues.Add(row);
             row.Title = f.Title;
             row.Detail = f.Detail;
             row.Suggestion = f.Suggestion;
@@ -440,28 +443,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Only the router and the DNS server in use are pinged. When the router is also the DNS server, one row is enough.
-    // A changed DNS server (for example after the DNS test) gets a new row, so its history does not mix with the old one.
-    void RefreshPingTargets()
-    {
-        if (!Demo.On && _activeNic is not null && NetInfo.Gateway(_activeNic) is string gw) _gateway.Target.Host = gw;
-        var dns = Demo.On ? Demo.DnsServer : _activeNic is null ? null : NetInfo.Dns(_activeNic);
-        var row = Pings.FirstOrDefault(p => p != _gateway);
-        if (dns is null || dns == _gateway.Target.Host)
-        {
-            if (row is not null) Pings.Remove(row);
-            return;
-        }
-        if (row?.Target.Host == dns) return;
-        if (row is not null) Pings.Remove(row);
-        Pings.Add(new PingRow(new PingTarget(T("DNS server"), dns, PingKind.Internet)));
-    }
-
     static string LinkSpeed(long bps) => bps >= 1_000_000_000 ? $"{(bps / 1e9).ToString("0.#", L.Culture)} Gbps" : $"{bps / 1e6:0} Mbps";
 
     public void Dispose()
     {
         _liveTimer.Stop();
+        _cardTimer.Stop();
+        _sensorTimer.Stop();
         _backgroundTimer.Stop();
         _updateTimer.Stop();
         _progressTimer.Stop();
@@ -474,5 +462,6 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _sizeCts?.Cancel();
         if (_counters.IsValueCreated) _counters.Value.Dispose();
         _memorySampler?.Dispose();
+        _sensors.Dispose();
     }
 }

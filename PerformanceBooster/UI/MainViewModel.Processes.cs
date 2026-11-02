@@ -41,7 +41,6 @@ public sealed partial class MainViewModel
     public ICommand SortProcessesCommand { get; private set; } = null!;
     public ICommand EndTaskCommand { get; private set; } = null!;
     public ICommand OpenProcessLocationCommand { get; private set; } = null!;
-    public ICommand ShowAllProcessesCommand { get; private set; } = null!;
 
     // The row menu (right click or ⋯): priority, game list, kept at full speed while a game runs.
     public ICommand AddProcessAsGameCommand { get; private set; } = null!;
@@ -97,12 +96,6 @@ public sealed partial class MainViewModel
         PriorityNormalCommand = Priority(ProcessPriorityClass.Normal);
         PriorityBelowNormalCommand = Priority(ProcessPriorityClass.BelowNormal);
         PriorityLowCommand = Priority(ProcessPriorityClass.Idle);
-        // From a Live card: the full list, sorted by that card's resource.
-        ShowAllProcessesCommand = new RelayCommand(_ =>
-        {
-            SortProcesses(_detail switch { DetailRam => ProcessColumn.Ram, DetailGpu => ProcessColumn.Gpu, DetailDisk => ProcessColumn.Disk, DetailNet => ProcessColumn.Net, _ => ProcessColumn.Cpu }, toggle: false);
-            SelectedTab = TabProcesses;
-        });
     }
 
     void SortProcesses(ProcessColumn column, bool toggle)

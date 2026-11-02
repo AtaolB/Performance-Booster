@@ -23,7 +23,7 @@ public sealed record HistogramRow(string Range, double Share, string Percent, Br
 // Latency tab: driver latency, mouse polling and the interrupts of the devices that matter in games (MSI mode, shared IRQs).
 public sealed partial class MainViewModel
 {
-    public const int TabLatency = 9;
+    public const int TabLatency = 11;
 
     public ObservableCollection<DriverLatencyRow> DriverLatencies { get; } = [];
     public ObservableCollection<InterruptRow> Interrupts { get; } = [];

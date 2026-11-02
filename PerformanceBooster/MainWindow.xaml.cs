@@ -38,6 +38,8 @@ public partial class MainWindow : Window
         WindowTheme.Apply(this);
         StateChanged += (_, _) => UpdateVisibility();
         IsVisibleChanged += (_, _) => UpdateVisibility();
+        Activated += (_, _) => ViewModel.SetActive(true);
+        Deactivated += (_, _) => ViewModel.SetActive(false);
     }
 
     void UpdateVisibility()

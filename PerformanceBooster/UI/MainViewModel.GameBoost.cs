@@ -148,9 +148,17 @@ public sealed partial class MainViewModel
         var (add, remove) = Defender.Plan(_settings);
         if (add.Count + remove.Count > 0 && (!silent || (Elevated.IsAdmin && !Busy)))
         {
-            var file = Path.Combine(AppPaths.Folder, "defender-change.json");
+            var file = AppPaths.DefenderRequest;
             AppPaths.WriteJson(file, new Defender.Change(add, remove), AppJson.Default.Change);
-            var outcome = silent ? await Elevated.RunAsync("--defender", file) : await RunElevatedAsync(["--defender", file], T("Windows Defender"));
+            ElevatedOutcome? outcome;
+            try
+            {
+                outcome = silent ? await Elevated.RunAsync("--defender", file) : await RunElevatedAsync(["--defender", file], T("Windows Defender"));
+            }
+            finally
+            {
+                AppPaths.Delete(file);
+            }
             if (outcome is { Started: true, ExitCode: 0 })
             {
                 _settings.DefenderExcluded = _settings.DefenderExcluded.Concat(add)

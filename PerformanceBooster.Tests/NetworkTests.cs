@@ -68,22 +68,6 @@ static class NetworkTests
             Runner.Note($"{n.Name} ({n.NetworkInterfaceType}) · {n.Speed / 1_000_000} Mbps · router {gateway} · adapter: {nic?.Description} · gigabit capable: {nic?.SupportsGigabit}");
         });
 
-        Runner.Test("Ping: router and 1.1.1.1", async () =>
-        {
-            var gateway = NetInfo.Gateway(NetInfo.Active()!)!;
-            foreach (var target in new[] { new PingTarget("Router", gateway, PingKind.Gateway), new PingTarget("Cloudflare", "1.1.1.1", PingKind.Internet) })
-            {
-                for (int i = 0; i < 5; i++)
-                {
-                    await target.SampleAsync();
-                    await Task.Delay(150);
-                }
-                Check.Equal(5, target.Samples, target.Name + " sample count");
-                Check.True(!double.IsNaN(target.Average) && target.LossPercent < 100, target.Name + " answers");
-                Runner.Note($"{target.Name}: avg {target.Average:0.0} ms · {target.Min:0}–{target.Max:0} ms · jitter {target.Jitter:0.0} ms · loss {target.LossPercent:0}%");
-            }
-        });
-
         Runner.Test("DNS query: answer and timeout", async () =>
         {
             var ms = await DnsBenchmark.QueryAsync("1.1.1.1", "cloudflare.com", CancellationToken.None);

@@ -356,9 +356,16 @@ public sealed partial class MainViewModel
         var backup = Path.Combine(AppPaths.Folder, "Backups", "Leftovers", DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         if (items.Any(i => i.NeedsAdmin))
         {
-            var file = Path.Combine(AppPaths.Folder, "leftovers.json");
+            var file = AppPaths.LeftoverRequest;
             AppPaths.WriteJson(file, new Elevated.LeftoverRequest(items, backup), AppJson.Default.LeftoverRequest);
-            await RunElevatedAsync(["--leftovers", file], T("Leftover files and registry entries"));
+            try
+            {
+                await RunElevatedAsync(["--leftovers", file], T("Leftover files and registry entries"));
+            }
+            finally
+            {
+                AppPaths.Delete(file);
+            }
             return;
         }
         var (log, failures) = await Task.Run(() => Leftovers.Delete(items, backup));

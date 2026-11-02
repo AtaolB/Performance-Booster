@@ -27,13 +27,15 @@
 - **One window for everything** that affects how games run: live usage, Windows settings, drivers and app updates, network quality, input latency.
 - **Every change can be undone.** Before a setting is changed for the first time, its old value is saved; Undo puts it back. Bulk changes start with a restore point.
 - **Explains instead of guessing.** Each setting says what it does, what it costs and what the recommended value is; issues come with a Fix button.
-- **Small.** A single ~2 MB exe that keeps itself up to date.
+- **Small.** A single ~3.5 MB exe that keeps itself up to date.
 
 ## Features
 
 | | |
 |---|---|
-| **Live** | An overview: CPU, RAM, graphics card, disk and network with 60-second charts; ping, jitter and loss to the router and to the DNS server in use; an issues panel with fixes (the issue count in the header opens it). Click a card to see the apps that use that resource most, including per-app network traffic. |
+| **Live** | CPU, RAM, graphics card, disk and network with charts and temperatures (hover a chart for the value at that moment), and every running app with its icon and its processor, memory, disk, graphics and network use: search, sort by any column, pin apps on top, and choose how often it is read. |
+| **Issues** | What slows games down right now, grouped by where it is solved: settings, network, devices, updates and system, with a Fix or Go to button. Things changed in the BIOS or with the hardware (memory profile, Resizable BAR) are shown as notes, not as issues. |
+| **Sensors** | Every sensor of the computer grouped by device: temperatures, fans, voltages, clocks, power and load with current, lowest, highest and average values and a chart for each; the reading interval can be set from 0.5 seconds to an hour. A warning when the processor or graphics card gets too hot, also while a game runs. |
 | **Processes** | Every running app with CPU, RAM, disk, graphics card and connections; click a column to sort, search or end the task. Right-click a row (or ⋯) to change its priority, add it to the game list, keep it at full speed while a game runs or open its file location. |
 | **Updates** | App updates through winget (pin, skip a version, details); running apps are closed only with your permission. Cancel updates one by one or all at once. Driver updates through Windows Update; Check looks for both. |
 | **Programs** | Desktop programs and Store apps with size, install date and last use; click a column to sort. Silent uninstall when possible, a scan for leftovers (files go to the Recycle Bin, registry keys are backed up first), and removal of broken entries whose files are already gone. |
@@ -136,7 +138,9 @@ dotnet publish PerformanceBooster.Launcher -c Release -o out   # out\Performance
 
 `dotnet publish PerformanceBooster.Launcher` builds the released exe; the app is packed inside it. The release workflow adds `-p:PublishAot=true` (needs the C++ build tools of Visual Studio).
 
-Test sections: Localization, Engine, Updates, AppUpdate, Changelog, System, GameBoost, Latency, Network, Programs, Details, App. Tests never change real system settings: they use fake stores, temporary registry keys under `HKCU\Software\PerformanceBoosterTests`, temporary folders and fake processes. `PERFORMANCEBOOSTER_DATA` points the app at a separate data folder.
+Test sections: Localization, Engine, Updates, AppUpdate, Changelog, System, GameBoost, Latency, Sensors, Network, Programs, Details, App. Tests never change real system settings: they use fake stores, temporary registry keys under `HKCU\Software\PerformanceBoosterTests`, temporary folders and fake processes. `PERFORMANCEBOOSTER_DATA` points the app at a separate data folder.
+
+Third-party code: the Sensors tab uses [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) (MPL-2.0; source at that link).
 
 **Releasing:** every change that reaches `main` raises `<Version>` in `PerformanceBooster/PerformanceBooster.csproj` and adds its notes at the top of both [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG.tr.md](CHANGELOG.tr.md) (the Changelog tests check this). When a version without a release reaches `main`, [the release workflow](.github/workflows/release.yml) runs the tests, builds the exe and publishes `v<version>` with those notes. Running copies find it and update themselves.
 

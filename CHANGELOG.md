@@ -2,6 +2,15 @@
 
 Every version of Performance Booster and what it brought. Turkish: [CHANGELOG.tr.md](CHANGELOG.tr.md).
 
+## 1.1.0 - 2026-11-02
+
+### New
+- Sensors tab: every sensor of the computer grouped by device (processor, graphics card, motherboard, memory, disks, network, battery): temperatures, fans, voltages, clocks, power, load and more, each with its current, lowest, highest and average value. Devices start folded and only the open ones are read. Click a row to see its chart. Read every 0.5 to 60 seconds, or every 1 to 120 whole seconds you type.
+- Live: the processor, graphics card and disk cards also show their temperature.
+- Live: every running app with its icon and its processor, memory, disk read and write, graphics and network use is always shown under the cards. Search by name, click a column title to sort, and pin apps to keep them on top. The cards and the list are read every 0.5 to 60 seconds (or 1 to 120 whole seconds you type); nothing is read while a game runs or the window is behind another one. Hover a card's chart to see the value at that moment. The cards no longer open a details panel, and the router ping is gone.
+- Issues tab: the issues moved from the Live tab to a tab of their own, grouped by where they are solved (settings, network, devices, updates, system). The memory profile, Resizable BAR and other things changed in the BIOS or with the hardware are shown as notes, not as issues.
+- High temperature warning (off until you turn it on on the Sensors tab): a notification when the processor or graphics card stays at or above its limit, also while a game runs and the window is closed. The limits can be changed.
+
 ## 1.0.2 - 2026-11-02
 
 ### New

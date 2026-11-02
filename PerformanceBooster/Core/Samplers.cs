@@ -176,7 +176,7 @@ public sealed record CounterSample(double GpuPercent, double GpuMemoryGb, double
 public sealed class CounterSampler : IDisposable
 {
     IntPtr _query;
-    readonly IntPtr _gpu, _gpuMemory, _diskIdle, _diskBytes, _cpuPerformance;
+    readonly IntPtr _gpu, _gpuMemory, _diskIdle, _diskBytes, _cpuPerformance, _threadPerformance;
     readonly int _baseMhz = Cpu.BaseMhz();
     readonly Dictionary<long, double> _perAdapter = [];
     IntPtr _items;
@@ -190,8 +190,12 @@ public sealed class CounterSampler : IDisposable
         _diskIdle = Add(@"\PhysicalDisk(_Total)\% Idle Time");
         _diskBytes = Add(@"\PhysicalDisk(_Total)\Disk Bytes/sec");
         _cpuPerformance = Add(@"\Processor Information(_Total)\% Processor Performance");
+        _threadPerformance = Add(@"\Processor Information(*)\% Processor Performance");
         Native.PdhCollectQueryData(_query);
     }
+
+    // The clock of each logical processor (MHz), in Windows' order; the Sensors tab shows it without a driver.
+    public double[] ThreadMhz { get; private set; } = [];
 
     IntPtr Add(string path) => Native.PdhAddEnglishCounter(_query, path, IntPtr.Zero, out var counter) == 0 ? counter : IntPtr.Zero;
 
@@ -214,6 +218,16 @@ public sealed class CounterSampler : IDisposable
         vram /= 1073741824.0;
         double idle = Single(_diskIdle);
         double perf = Single(_cpuPerformance);
+        // Instances are "group,number"; the totals ("_Total", "0,_Total") are left out.
+        var threads = new List<(int Group, int Number, double Mhz)>();
+        Read(_threadPerformance, (name, value) =>
+        {
+            int comma = name.IndexOf(',');
+            if (_baseMhz > 0 && comma > 0 && int.TryParse(name[..comma], CultureInfo.InvariantCulture, out var group)
+                && int.TryParse(name[(comma + 1)..], CultureInfo.InvariantCulture, out var number))
+                threads.Add((group, number, _baseMhz * value / 100.0));
+        });
+        ThreadMhz = [.. threads.OrderBy(t => t.Group).ThenBy(t => t.Number).Select(t => t.Mhz)];
         return new(
             double.IsNaN(gpu) ? double.NaN : Math.Min(gpu, 100),
             vram,
@@ -434,6 +448,11 @@ public sealed class ProcessSampler
             .ToList();
     }
 }
+
+// One app on the Live tab (processes with the same name combined): processor %, private memory, graphics %, network and
+// disk bytes/s.
+public sealed record AppUsage(string Name, int Count, double CpuPercent, long RamBytes, double GpuPercent, long Down, long Up, bool CanKill,
+    double ReadPerSec = 0, double WritePerSec = 0);
 
 public sealed record ProcessGroup(string Name, int FirstId, int Count, IReadOnlyList<int> Ids, double CpuPercent, long PrivateWorkingSet,
     double ReadPerSec, double WritePerSec, bool CanKill);

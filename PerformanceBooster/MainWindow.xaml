@@ -128,282 +128,472 @@
 
             <!-- ================= Live ================= -->
             <TabItem Tag="&#xE9D9;" Header="{ui:T 'Live'}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
-                    <StackPanel>
-                        <UniformGrid Columns="5" Margin="-6,0">
-                            <Button Style="{StaticResource CardButton}" Margin="6" Command="{Binding ShowDetailCommand}" CommandParameter="cpu" Tag="{Binding IsDetailCpu}"
-                                    AutomationProperties.Name="{ui:T 'Processor details'}" ToolTip="{ui:T 'Show which process uses how much'}">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE950;" Style="{StaticResource Icon}" Foreground="#5B8CFF" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{ui:T 'PROCESSOR'}" Style="{StaticResource CardTitle}"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding CpuText}" Style="{StaticResource BigValue}"/>
-                                    <TextBlock Text="{Binding CpuSub}" Style="{StaticResource SubText}" TextWrapping="Wrap"/>
-                                    <ui:Sparkline Values="{Binding CpuSeries}" Stroke="#5B8CFF" Maximum="100" Height="46" Margin="0,12,0,0"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource CardButton}" Margin="6" Command="{Binding ShowDetailCommand}" CommandParameter="ram" Tag="{Binding IsDetailRam}"
-                                    AutomationProperties.Name="{ui:T 'Memory details'}" ToolTip="{ui:T 'Show which process uses how much'}">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xEEA0;" Style="{StaticResource Icon}" Foreground="#A371F7" Margin="0,0,8,0"/>
-                                        <TextBlock Text="RAM" Style="{StaticResource CardTitle}"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding RamText}" Style="{StaticResource BigValue}"/>
-                                    <TextBlock Text="{Binding RamSub}" Style="{StaticResource SubText}"/>
-                                    <ui:Sparkline Values="{Binding RamSeries}" Stroke="#A371F7" Maximum="100" Height="46" Margin="0,12,0,0"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource CardButton}" Margin="6" Command="{Binding ShowDetailCommand}" CommandParameter="gpu" Tag="{Binding IsDetailGpu}"
-                                    AutomationProperties.Name="{ui:T 'Graphics details'}" ToolTip="{ui:T 'Show which process uses how much'}">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE7F4;" Style="{StaticResource Icon}" Foreground="#3FB950" Margin="0,0,8,0"/>
-                                        <TextBlock Style="{StaticResource CardTitle}" TextTrimming="CharacterEllipsis">
-                                            <Run Text="GPU · "/><Run Text="{Binding GpuName, Mode=OneWay}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding GpuText}" Style="{StaticResource BigValue}"/>
-                                    <TextBlock Text="{Binding GpuSub}" Style="{StaticResource SubText}" TextWrapping="Wrap"/>
-                                    <ui:Sparkline Values="{Binding GpuSeries}" Stroke="#3FB950" Maximum="100" Height="46" Margin="0,12,0,0"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource CardButton}" Margin="6" Command="{Binding ShowDetailCommand}" CommandParameter="disk" Tag="{Binding IsDetailDisk}"
-                                    AutomationProperties.Name="{ui:T 'Disk details'}" ToolTip="{ui:T 'Show which process uses how much'}">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xEDA2;" Style="{StaticResource Icon}" Foreground="#39C5CF" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{ui:T 'DISK ACTIVITY'}" Style="{StaticResource CardTitle}"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding DiskText}" Style="{StaticResource BigValue}"/>
-                                    <TextBlock Text="{Binding DiskSub}" Style="{StaticResource SubText}"/>
-                                    <ui:Sparkline Values="{Binding DiskSeries}" Stroke="#39C5CF" Maximum="100" Height="46" Margin="0,12,0,0"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource CardButton}" Margin="6" Command="{Binding ShowDetailCommand}" CommandParameter="net" Tag="{Binding IsDetailNet}"
-                                    AutomationProperties.Name="{ui:T 'Network details'}" ToolTip="{ui:T 'Show which process uses how much'}">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" Foreground="#F0B429" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{ui:T 'NETWORK · DOWNLOAD'}" Style="{StaticResource CardTitle}"/>
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding NetText}" Style="{StaticResource BigValue}"/>
-                                    <TextBlock Text="{Binding NetSub}" Style="{StaticResource SubText}" TextWrapping="Wrap"/>
-                                    <ui:Sparkline Values="{Binding NetSeries}" Stroke="#F0B429" Height="46" Margin="0,12,0,0"/>
-                                </StackPanel>
-                            </Button>
-                        </UniformGrid>
-
-                        <!-- Clicking a card: processes using that resource -->
-                        <Border Style="{StaticResource Card}" Margin="0,6,0,6" BorderBrush="{StaticResource LineStrong}"
-                                Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <UniformGrid Columns="5" Margin="-6,0">
+                        <Border Style="{StaticResource Card}" Margin="6">
                             <StackPanel>
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="8,4" Command="{Binding CloseDetailCommand}"
-                                            ToolTip="{ui:T 'Close'}" AutomationProperties.Name="{ui:T 'Close'}">
-                                        <TextBlock Text="&#xE711;" Style="{StaticResource Icon}" Foreground="{StaticResource Fg}" FontSize="11"/>
-                                    </Button>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource SmallButton}" Margin="0,0,8,0" Command="{Binding ShowAllProcessesCommand}"
-                                            ToolTip="{ui:T 'The Processes tab lists every app, sorted by this resource.'}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{ui:T 'All processes'}"/>
-                                            <TextBlock Text="&#xE76C;" Style="{StaticResource Icon}" Foreground="{StaticResource Fg}" FontSize="10" Margin="6,1,0,0"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button DockPanel.Dock="Right" Content="{ui:T 'Show speed per app'}" Style="{StaticResource SmallAccentButton}" Margin="0,0,8,0"
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE950;" Style="{StaticResource Icon}" Foreground="#5B8CFF" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{ui:T 'PROCESSOR'}" Style="{StaticResource CardTitle}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding CpuText}" Style="{StaticResource BigValue}"/>
+                                <TextBlock Text="{Binding CpuSub}" Style="{StaticResource SubText}" TextWrapping="Wrap"/>
+                                <ui:Sparkline Values="{Binding CpuSeries}" Format="{Binding PercentChartFormat}" SecondsPerSample="{Binding LiveInterval.Seconds}" Cursor="Cross" Stroke="#5B8CFF" Maximum="100" Height="46" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}" Margin="6">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xEEA0;" Style="{StaticResource Icon}" Foreground="#A371F7" Margin="0,0,8,0"/>
+                                    <TextBlock Text="RAM" Style="{StaticResource CardTitle}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding RamText}" Style="{StaticResource BigValue}"/>
+                                <TextBlock Text="{Binding RamSub}" Style="{StaticResource SubText}"/>
+                                <ui:Sparkline Values="{Binding RamSeries}" Format="{Binding RamChartFormat}" SecondsPerSample="{Binding LiveInterval.Seconds}" Cursor="Cross" Stroke="#A371F7" Maximum="100" Height="46" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}" Margin="6">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7F4;" Style="{StaticResource Icon}" Foreground="#3FB950" Margin="0,0,8,0"/>
+                                    <TextBlock Style="{StaticResource CardTitle}" TextTrimming="CharacterEllipsis">
+                                        <Run Text="GPU · "/><Run Text="{Binding GpuName, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                                <TextBlock Text="{Binding GpuText}" Style="{StaticResource BigValue}"/>
+                                <TextBlock Text="{Binding GpuSub}" Style="{StaticResource SubText}" TextWrapping="Wrap"/>
+                                <ui:Sparkline Values="{Binding GpuSeries}" Format="{Binding PercentChartFormat}" SecondsPerSample="{Binding LiveInterval.Seconds}" Cursor="Cross" Stroke="#3FB950" Maximum="100" Height="46" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}" Margin="6">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xEDA2;" Style="{StaticResource Icon}" Foreground="#39C5CF" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{ui:T 'DISK ACTIVITY'}" Style="{StaticResource CardTitle}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding DiskText}" Style="{StaticResource BigValue}"/>
+                                <TextBlock Text="{Binding DiskSub}" Style="{StaticResource SubText}"/>
+                                <ui:Sparkline Values="{Binding DiskSeries}" Format="{Binding PercentChartFormat}" SecondsPerSample="{Binding LiveInterval.Seconds}" Cursor="Cross" Stroke="#39C5CF" Maximum="100" Height="46" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}" Margin="6">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" Foreground="#F0B429" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{ui:T 'NETWORK · DOWNLOAD'}" Style="{StaticResource CardTitle}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding NetText}" Style="{StaticResource BigValue}"/>
+                                <TextBlock Text="{Binding NetSub}" Style="{StaticResource SubText}" TextWrapping="Wrap"/>
+                                <ui:Sparkline Values="{Binding NetSeries}" Format="{Binding NetChartFormat}" SecondsPerSample="{Binding LiveInterval.Seconds}" Cursor="Cross" Stroke="#F0B429" Height="46" Margin="0,12,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <!-- Every running app (same names combined) with its processor, memory, disk, graphics and network use. Click a title to
+                         sort; pinned apps stay on top. -->
+                    <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,6,0,0" Padding="14,12,8,8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <DockPanel Margin="0,0,6,10">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <Button Content="{ui:T 'Show speed per app'}" Style="{StaticResource SmallAccentButton}" Margin="0,0,12,0"
                                             ToolTip="{ui:T 'Needs administrator permission; runs while the window is open.'}"
                                             Command="{Binding StartNetMonitorCommand}" Visibility="{Binding CanStartNetMonitor, Converter={StaticResource BoolToVis}}"/>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding DetailIcon}" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding DetailTitle}" Style="{StaticResource CardTitle}"/>
-                                    </StackPanel>
-                                </DockPanel>
-                                <TextBlock Text="{Binding DetailNote}" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,6,0,10"/>
-                                <Grid Margin="0,0,0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="60"/>
-                                        <ColumnDefinition Width="110"/>
-                                        <ColumnDefinition Width="110"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="170"/>
-                                        <ColumnDefinition Width="80"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{ui:T 'Name'}" Style="{StaticResource SubText}"/>
-                                    <TextBlock Grid.Column="1" Text="{ui:T 'Count'}" Style="{StaticResource SubText}"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding DetailPrimary}" Style="{StaticResource SubText}"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding DetailSecondary}" Style="{StaticResource SubText}"/>
-                                    <TextBlock Grid.Column="4" Text="{Binding DetailThird}" Style="{StaticResource SubText}"/>
-                                </Grid>
-                                <TextBlock Text="{ui:T 'No activity right now.'}" Margin="0,6,0,2">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock" BasedOn="{StaticResource SubText}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding DetailRows.Count}" Value="0">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <ItemsControl ItemsSource="{Binding DetailRows}">
+                                    <TextBox Width="220" Text="{Binding AppSearch, UpdateSourceTrigger=PropertyChanged, Delay=150}" Tag="{ui:T 'Search apps'}"
+                                             AutomationProperties.Name="{ui:T 'Search apps'}" Margin="0,0,12,0">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Escape" Command="{Binding ClearAppSearchCommand}"/>
+                                        </TextBox.InputBindings>
+                                    </TextBox>
+                                    <TextBlock Text="{ui:T 'Read every'}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox ItemsSource="{Binding LiveInterval.Choices}" SelectedItem="{Binding LiveInterval.Selected, Mode=TwoWay}" Width="100"
+                                              ToolTip="{ui:T 'How often the cards above and this list are read. Nothing is read while a game runs or the window is behind another one.'}"/>
+                                    <TextBox Width="56" Margin="8,0,0,0" MaxLength="3" ui:InputBox.DigitsOnly="True" Text="{Binding LiveInterval.CustomText, UpdateSourceTrigger=LostFocus}"
+                                             AutomationProperties.Name="{ui:T 'Seconds between readings'}" ToolTip="{ui:T 'Whole seconds between readings, from 1 to 120. Press Enter or leave the box to apply.'}"
+                                             Visibility="{Binding LiveInterval.IsCustom, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBlock Text="{ui:T 's'}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="6,0,0,0"
+                                               Visibility="{Binding LiveInterval.IsCustom, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="&#xE71D;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{ui:T 'RUNNING APPS'}" Style="{StaticResource CardTitle}"/>
+                                    <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{Binding LiveAppsNote}"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <Grid Grid.Row="1" Margin="0,0,24,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="44"/>
+                                    <ColumnDefinition Width="76"/>
+                                    <ColumnDefinition Width="86"/>
+                                    <ColumnDefinition Width="96"/>
+                                    <ColumnDefinition Width="96"/>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="96"/>
+                                    <ColumnDefinition Width="96"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.Resources>
+                                    <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                        <Setter Property="Padding" Value="0,2"/>
+                                        <Setter Property="Command" Value="{Binding SortLiveAppsCommand}"/>
+                                    </Style>
+                                </Grid.Resources>
+                                <Button Grid.Column="1" CommandParameter="Name" HorizontalAlignment="Left" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppNameHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                                <Button Grid.Column="3" CommandParameter="Cpu" HorizontalAlignment="Right" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppCpuHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                                <Button Grid.Column="4" CommandParameter="Ram" HorizontalAlignment="Right" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppRamHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                                <Button Grid.Column="5" CommandParameter="Read" HorizontalAlignment="Right" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppReadHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                                <Button Grid.Column="6" CommandParameter="Write" HorizontalAlignment="Right" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppWriteHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                                <Button Grid.Column="7" CommandParameter="Gpu" HorizontalAlignment="Right" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppGpuHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                                <Button Grid.Column="8" CommandParameter="Down" HorizontalAlignment="Right" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppDownHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                                <Button Grid.Column="9" CommandParameter="Up" HorizontalAlignment="Right" ToolTip="{ui:T 'Sort by this column'}">
+                                    <TextBlock Text="{Binding AppUpHeader}" Style="{StaticResource SubText}"/>
+                                </Button>
+                            </Grid>
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+                                <ItemsControl ItemsSource="{Binding LiveApps}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="0,1" MinHeight="31">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="60"/>
-                                                    <ColumnDefinition Width="110"/>
-                                                    <ColumnDefinition Width="110"/>
-                                                    <ColumnDefinition Width="80"/>
-                                                    <ColumnDefinition Width="170"/>
-                                                    <ColumnDefinition Width="80"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Count}" Style="{StaticResource SubText}" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="2" Text="{Binding Primary}" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="3" Text="{Binding Secondary}" Foreground="{StaticResource Sub}" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="4" Text="{Binding Third}" Foreground="{StaticResource Sub}" VerticalAlignment="Center"/>
-                                                <ProgressBar Grid.Column="5" Value="{Binding SharePercent, Mode=OneWay}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                                                <Button Grid.Column="6" Content="{ui:T 'Close'}" Style="{StaticResource SmallButton}"
-                                                        Visibility="{Binding CanKill, Converter={StaticResource BoolToVis}}"
-                                                        Command="{Binding DataContext.KillUsageCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}"/>
-                                            </Grid>
+                                            <Border x:Name="Row" CornerRadius="6" Padding="0,3" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="{StaticResource CardAlt}"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="{Binding PinText}" CommandParameter="{Binding}"
+                                                                  Command="{Binding PlacementTarget.Tag.PinLiveAppCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                        <MenuItem Header="{ui:T 'End task'}" CommandParameter="{Binding}" IsEnabled="{Binding CanKill}"
+                                                                  Command="{Binding PlacementTarget.Tag.KillLiveAppCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <Grid Margin="0,0,10,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="28"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="44"/>
+                                                        <ColumnDefinition Width="76"/>
+                                                        <ColumnDefinition Width="86"/>
+                                                        <ColumnDefinition Width="96"/>
+                                                        <ColumnDefinition Width="96"/>
+                                                        <ColumnDefinition Width="70"/>
+                                                        <ColumnDefinition Width="96"/>
+                                                        <ColumnDefinition Width="96"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <!-- The pin: always shown on a pinned app, on the others while the mouse is over the row. -->
+                                                    <Button Padding="4,2" VerticalAlignment="Center" CommandParameter="{Binding}"
+                                                            Command="{Binding DataContext.PinLiveAppCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            ToolTip="{Binding PinText}" AutomationProperties.Name="{Binding PinText}">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                                                                <Setter Property="Opacity" Value="0"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsMouseOver, ElementName=Row}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.6"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                                        <Setter Property="Opacity" Value="1"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                        <TextBlock Text="&#xE718;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource Accent}"/>
+                                                    </Button>
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Image Source="{Binding Icon}" Width="18" Height="18" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality"
+                                                               Visibility="{Binding HasIcon, Converter={StaticResource BoolToVis}}"/>
+                                                        <Border Width="18" Height="18" Margin="0,0,8,0" CornerRadius="4" Background="{StaticResource CardAlt}"
+                                                                Visibility="{Binding NoIcon, Converter={StaticResource BoolToVis}}">
+                                                            <TextBlock Text="&#xE71D;" Style="{StaticResource Icon}" FontSize="10" HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Count}" Style="{StaticResource SubText}" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Cpu}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="4" Text="{Binding Ram}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="5" Text="{Binding Read}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="6" Text="{Binding Write}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="7" Text="{Binding Gpu}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="8" Text="{Binding Down}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="9" Text="{Binding Up}" TextAlignment="Right" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ================= Issues ================= -->
+            <TabItem Tag="&#xE7BA;" Header="{Binding IssuesTabTitle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+                    <StackPanel>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" Foreground="{StaticResource OkBrush}" FontSize="18" Margin="0,0,10,0"
+                                           Visibility="{Binding NoIssues, Converter={StaticResource BoolToVis}}"/>
+                                <TextBlock Text="{Binding IssuesSummary}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-
-                        <Grid Margin="0,6,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="3*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="2*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Border Style="{StaticResource Card}" VerticalAlignment="Top">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE839;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{ui:T 'PING AND LATENCY'}" Style="{StaticResource CardTitle}"/>
-                                        <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Ping is the time a small packet needs to reach the target and come back. Jitter is how much the ping changes from one measurement to the next: high jitter makes a game feel uneven even when the average is low. Loss is the share of packets that never came back. On a cable the router row usually stays below 1-2 ms with almost no jitter; Wi-Fi adds a few milliseconds.'}"/>
-                                    </StackPanel>
-                                    <Grid Margin="0,14,0,2">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="18"/>
-                                            <ColumnDefinition Width="140"/>
-                                            <ColumnDefinition Width="70"/>
-                                            <ColumnDefinition Width="90"/>
-                                            <ColumnDefinition Width="70"/>
-                                            <ColumnDefinition Width="56"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="1" Text="{ui:T 'Target'}" Style="{StaticResource SubText}"/>
-                                        <TextBlock Grid.Column="2" Text="{ui:T 'Last'}" Style="{StaticResource SubText}"/>
-                                        <TextBlock Grid.Column="3" Text="{ui:T 'Average'}" Style="{StaticResource SubText}"/>
-                                        <TextBlock Grid.Column="4" Text="Jitter" Style="{StaticResource SubText}"/>
-                                        <TextBlock Grid.Column="5" Text="{ui:T 'Loss'}" Style="{StaticResource SubText}"/>
-                                        <TextBlock Grid.Column="6" Text="{ui:T 'Last 60 s'}" Style="{StaticResource SubText}" Margin="8,0"/>
-                                    </Grid>
-                                    <ItemsControl ItemsSource="{Binding Pings}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,6">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="18"/>
-                                                        <ColumnDefinition Width="140"/>
-                                                        <ColumnDefinition Width="70"/>
-                                                        <ColumnDefinition Width="90"/>
-                                                        <ColumnDefinition Width="70"/>
-                                                        <ColumnDefinition Width="56"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Ellipse Width="9" Height="9" Fill="{Binding Status}" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                        <TextBlock Text="{Binding Host}" Style="{StaticResource SubText}" TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Last}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Average}"/>
-                                                        <TextBlock Text="{Binding Range}" Style="{StaticResource SubText}"/>
-                                                    </StackPanel>
-                                                    <TextBlock Grid.Column="4" Text="{Binding Jitter}" VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="5" Text="{Binding Loss}" VerticalAlignment="Center"/>
-                                                    <ui:Sparkline Grid.Column="6" Values="{Binding Series}" Stroke="{Binding Status}" Height="34" Margin="8,0"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock Margin="0,12,0,0" Style="{StaticResource SubText}" TextWrapping="Wrap"
-                                               Text="{ui:T 'The router row measures the link between the computer and the router; the DNS row the way to the DNS server in use. If only the DNS row shows high jitter or loss, the problem is beyond the router.'}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                        <TextBlock Text="&#xE7BA;" Style="{StaticResource Icon}" Foreground="{StaticResource WarnBrush}" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{ui:T 'ISSUES AND SUGGESTIONS'}" Style="{StaticResource CardTitle}"/>
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <StackPanel.Style>
-                                            <Style TargetType="StackPanel">
-                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Issues.Count}" Value="0">
-                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </StackPanel.Style>
-                                        <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" Foreground="{StaticResource OkBrush}" FontSize="18" Margin="0,0,10,0"/>
-                                        <TextBlock Text="{ui:T 'No issues right now.'}" Foreground="{StaticResource Sub}" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                    <ItemsControl ItemsSource="{Binding Issues}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="{StaticResource CardAlt}" CornerRadius="10" Margin="0,0,0,8" Padding="13,11"
-                                                        BorderThickness="3,0,0,0" BorderBrush="{Binding Severity}">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,2,0,0"
-                                                                       Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}"/>
-                                                            <TextBlock Text="{Binding Suggestion}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12.5" Foreground="#C9D1DD"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Top">
-                                                            <Button Content="{ui:T 'Fix'}" Style="{StaticResource SmallAccentButton}"
-                                                                    Visibility="{Binding CanFix, Converter={StaticResource BoolToVis}}"
-                                                                    Command="{Binding DataContext.FixOneCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding TweakId}"/>
-                                                            <Button Content="{ui:T 'Open'}" Style="{StaticResource SmallButton}"
-                                                                    Visibility="{Binding HasUri, Converter={StaticResource BoolToVis}}"
-                                                                    Command="{Binding DataContext.OpenUriCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding Uri}"/>
-                                                            <Button Content="{Binding TabLabel}" Style="{StaticResource SmallButton}"
-                                                                    Visibility="{Binding HasTab, Converter={StaticResource BoolToVis}}"
-                                                                    Command="{Binding DataContext.GoToTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding TabTarget}"/>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                        <ItemsControl ItemsSource="{Binding IssueSections}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Card}" Margin="0,0,0,8" Visibility="{Binding HasRows, Converter={StaticResource BoolToVis}}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Icon}" Margin="0,0,8,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+                                                            <Setter Property="Foreground" Value="{StaticResource WarnBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsNote}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Subtitle}" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                                            <ItemsControl ItemsSource="{Binding Rows}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{StaticResource CardAlt}" CornerRadius="10" Margin="0,0,0,8" Padding="13,11"
+                                                                BorderThickness="3,0,0,0" BorderBrush="{Binding Severity}">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                                               Visibility="{Binding HasDetail, Converter={StaticResource BoolToVis}}"/>
+                                                                    <TextBlock Text="{Binding Suggestion}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12.5" Foreground="#C9D1DD"/>
+                                                                </StackPanel>
+                                                                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Top">
+                                                                    <Button Content="{ui:T 'Fix'}" Style="{StaticResource SmallAccentButton}"
+                                                                            Visibility="{Binding CanFix, Converter={StaticResource BoolToVis}}"
+                                                                            Command="{Binding DataContext.FixOneCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding TweakId}"/>
+                                                                    <Button Content="{ui:T 'Open'}" Style="{StaticResource SmallButton}"
+                                                                            Visibility="{Binding HasUri, Converter={StaticResource BoolToVis}}"
+                                                                            Command="{Binding DataContext.OpenUriCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding Uri}"/>
+                                                                    <Button Content="{Binding TabLabel}" Style="{StaticResource SmallButton}"
+                                                                            Visibility="{Binding HasTab, Converter={StaticResource BoolToVis}}"
+                                                                            Command="{Binding DataContext.GoToTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding TabTarget}"/>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
+            </TabItem>
+
+            <!-- ================= Sensors ================= -->
+            <TabItem Tag="&#xE9CA;" Header="{ui:T 'Sensors'}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <WrapPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,28,6">
+                                    <TextBlock Text="{ui:T 'Read every'}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox ItemsSource="{Binding SensorInterval.Choices}" SelectedItem="{Binding SensorInterval.Selected, Mode=TwoWay}" Width="110"/>
+                                    <TextBox Width="60" Margin="8,0,0,0" MaxLength="3" ui:InputBox.DigitsOnly="True" Text="{Binding SensorInterval.CustomText, UpdateSourceTrigger=LostFocus}"
+                                             AutomationProperties.Name="{ui:T 'Seconds between readings'}" ToolTip="{ui:T 'Whole seconds between readings, from 1 to 120. Press Enter or leave the box to apply.'}"
+                                             Visibility="{Binding SensorInterval.IsCustom, Converter={StaticResource BoolToVis}}"/>
+                                    <TextBlock Text="{ui:T 's'}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="6,0,0,0" Visibility="{Binding SensorInterval.IsCustom, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,28,6">
+                                    <CheckBox Content="{ui:T 'Warn at high temperatures'}" IsChecked="{Binding TemperatureWarnings}" VerticalAlignment="Center"/>
+                                    <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Shows a notification when the processor or graphics card stays at or above its limit. Checked every 6 seconds in the background, also while a game runs and the window is closed; it warns again only after the temperature dropped and 15 minutes passed.'}"/>
+                                    <TextBlock Text="{ui:T 'Processor'}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                                    <ComboBox ItemsSource="{Binding TempLimits}" SelectedItem="{Binding CpuTempLimit, Mode=TwoWay}" Width="76"
+                                              IsEnabled="{Binding TemperatureWarnings}"/>
+                                    <TextBlock Text="°C" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    <TextBlock Text="{ui:T 'Graphics card'}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                                    <ComboBox ItemsSource="{Binding TempLimits}" SelectedItem="{Binding GpuTempLimit, Mode=TwoWay}" Width="76"
+                                              IsEnabled="{Binding TemperatureWarnings}"/>
+                                    <TextBlock Text="°C" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                </StackPanel>
+                                <Button Content="{ui:T 'Reset lowest and highest'}" Command="{Binding ResetSensorStatsCommand}" Style="{StaticResource SmallButton}" Margin="0,0,0,6"/>
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Text="{ui:T 'Every sensor of the computer, grouped by device. Click a device to open it: only open devices are read, and only while this tab is open. Lowest, highest and average count from the moment the device was first opened. Click a row to see its chart.'}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Column titles; the same widths as the rows below (the right margin leaves room for the scroll bar). -->
+                    <Grid Grid.Row="1" Margin="42,0,32,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="120"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{ui:T 'Sensor'}" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Grid.Column="1" Text="{ui:T 'Now'}" Style="{StaticResource CardTitle}" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="2" Text="{ui:T 'Lowest'}" Style="{StaticResource CardTitle}" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="3" Text="{ui:T 'Highest'}" Style="{StaticResource CardTitle}" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="4" Text="{ui:T 'Average'}" Style="{StaticResource CardTitle}" TextAlignment="Right"/>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+                        <ItemsControl ItemsSource="{Binding SensorDevices}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Card}" Margin="0,0,0,8" Padding="10,8">
+                                        <StackPanel>
+                                            <!-- Click anywhere on the title row to open or fold the device; a folded device is not read. -->
+                                            <Border Background="Transparent" Cursor="Hand">
+                                                <Border.InputBindings>
+                                                    <MouseBinding MouseAction="LeftClick" CommandParameter="{Binding}"
+                                                                  Command="{Binding DataContext.ToggleSensorDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                </Border.InputBindings>
+                                                <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Padding="4,4"
+                                                        Command="{Binding DataContext.ToggleSensorDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                        AutomationProperties.Name="{Binding Name}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock FontSize="10" Margin="0,0,10,0">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+                                                                    <Setter Property="Text" Value="&#xE70D;"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                                                            <Setter Property="Text" Value="&#xE76C;"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,10,0"/>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding KindText}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </Border>
+                                            <ItemsControl ItemsSource="{Binding Sections}" Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,0,0,6">
+                                                            <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}" Margin="32,4,0,3"/>
+                                                            <ItemsControl ItemsSource="{Binding Rows}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Border CornerRadius="6" Padding="32,3,10,3" Cursor="Hand">
+                                                                            <Border.Style>
+                                                                                <Style TargetType="Border">
+                                                                                    <Setter Property="Background" Value="Transparent"/>
+                                                                                    <Style.Triggers>
+                                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                                            <Setter Property="Background" Value="{StaticResource CardAlt}"/>
+                                                                                        </Trigger>
+                                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                            <Setter Property="Background" Value="{StaticResource ControlHover}"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </Border.Style>
+                                                                            <Border.InputBindings>
+                                                                                <MouseBinding MouseAction="LeftClick" CommandParameter="{Binding}"
+                                                                                              Command="{Binding DataContext.SelectSensorCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                                            </Border.InputBindings>
+                                                                            <Grid>
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="*"/>
+                                                                                    <ColumnDefinition Width="120"/>
+                                                                                    <ColumnDefinition Width="120"/>
+                                                                                    <ColumnDefinition Width="120"/>
+                                                                                    <ColumnDefinition Width="120"/>
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                                                                <TextBlock Grid.Column="1" Text="{Binding Current}" FontWeight="SemiBold" TextAlignment="Right"/>
+                                                                                <TextBlock Grid.Column="2" Text="{Binding Min}" Foreground="{StaticResource Sub}" TextAlignment="Right"/>
+                                                                                <TextBlock Grid.Column="3" Text="{Binding Max}" Foreground="{StaticResource Sub}" TextAlignment="Right"/>
+                                                                                <TextBlock Grid.Column="4" Text="{Binding Average}" Foreground="{StaticResource Sub}" TextAlignment="Right"/>
+                                                                            </Grid>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <TextBlock Grid.Row="3" Text="{Binding SensorStatus}" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="2,6,0,0"/>
+
+                    <!-- The chart of the clicked sensor. -->
+                    <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,8,0,0" Visibility="{Binding HasSensorChart, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="8,4" Command="{Binding CloseSensorChartCommand}"
+                                        ToolTip="{ui:T 'Close'}" AutomationProperties.Name="{ui:T 'Close'}">
+                                    <TextBlock Text="&#xE711;" Style="{StaticResource Icon}"/>
+                                </Button>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding SensorChartSpan}" Style="{StaticResource SubText}" VerticalAlignment="Center" Margin="12,0"/>
+                                <TextBlock Text="{Binding SensorChartTitle}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
+                            <TextBlock Text="{Binding SensorChartValues}" Style="{StaticResource SubText}" Margin="0,4,0,0"/>
+                            <ui:Sparkline Values="{Binding SensorChart}" Stroke="#5B8CFF" FitRange="True" Capacity="300" Height="130" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </TabItem>
 
             <!-- ================= Updates ================= -->

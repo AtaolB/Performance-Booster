@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows.Media;
 using PerformanceBooster.Core;
 
@@ -108,59 +109,58 @@ public sealed class TweakRow(Tweak tweak) : ObservableObject
     public void ResetPick() => _userPicked = false;
 }
 
-public sealed class PingRow(PingTarget target) : ObservableObject
+// Where an issue is solved; Hardware is for notes done in the BIOS or with the hardware, not counted as issues.
+public enum IssueGroup { Now, Settings, Network, Devices, Updates, System, Hardware }
+
+public sealed class IssueSection(IssueGroup group) : ObservableObject
 {
-    public PingTarget Target { get; } = target;
-    public string Name => Target.Name;
+    public IssueGroup Group { get; } = group;
+    public ObservableCollection<IssueRow> Rows { get; } = [];
+    public bool HasRows => Rows.Count > 0;
+    public bool IsNote => Group == IssueGroup.Hardware;
 
-    string _host = target.Host, _last = "–", _avg = "–", _range = "", _jitter = "–", _loss = "–";
-    double[] _series = [];
-    Brush _status = Palette.Muted;
-
-    public string Host { get => _host; private set => Set(ref _host, value); }
-    public string Last { get => _last; private set => Set(ref _last, value); }
-    public string Average { get => _avg; private set => Set(ref _avg, value); }
-    public string Range { get => _range; private set => Set(ref _range, value); }
-    public string Jitter { get => _jitter; private set => Set(ref _jitter, value); }
-    public string Loss { get => _loss; private set => Set(ref _loss, value); }
-    public double[] Series { get => _series; private set => Set(ref _series, value); }
-    public Brush Status { get => _status; private set => Set(ref _status, value); }
-
-    public async Task SampleAsync()
+    public string Title => Group switch
     {
-        await Target.SampleAsync();
-        Show();
+        IssueGroup.Now => T("Right now"),
+        IssueGroup.Settings => T("Settings"),
+        IssueGroup.Network => T("Network"),
+        IssueGroup.Devices => T("Devices"),
+        IssueGroup.Updates => T("Updates"),
+        IssueGroup.System => T("System"),
+        _ => T("Hardware and BIOS (for your information)"),
+    };
+
+    public string Subtitle => Group switch
+    {
+        IssueGroup.Now => T("What the computer is doing at this moment: memory, processor, disk and heat."),
+        IssueGroup.Settings => T("Fixed on the Settings tab, or here with Fix."),
+        IssueGroup.Network => T("The connection to the router and the network adapter."),
+        IssueGroup.Devices => T("Where the mouse and other devices are connected."),
+        IssueGroup.Updates => T("App and driver updates waiting on the Updates tab."),
+        IssueGroup.System => T("Windows, drivers, disks and the display."),
+        _ => T("Not issues: changed in the BIOS or with the hardware itself, if you want to."),
+    };
+
+    public string Icon => Group switch
+    {
+        IssueGroup.Now => "\uE9D9",
+        IssueGroup.Settings => "\uE713",
+        IssueGroup.Network => "\uE774",
+        IssueGroup.Devices => "\uE962",
+        IssueGroup.Updates => "\uE895",
+        IssueGroup.System => "\uE770",
+        _ => "\uE946",
+    };
+
+    public void Sync(IEnumerable<string> keys)
+    {
+        var keep = keys.ToHashSet();
+        for (int i = Rows.Count - 1; i >= 0; i--)
+            if (!keep.Contains(Rows[i].Key)) Rows.RemoveAt(i);
+        RaiseRows();
     }
 
-    // A made-up reply time (demo).
-    public void Add(double ms)
-    {
-        Target.Add(ms);
-        Show();
-    }
-
-    void Show()
-    {
-        var t = Target;
-        Host = t.Host;
-        Last = t.Last is double l ? $"{l:0} ms" : T("lost");
-        Average = double.IsNaN(t.Average) ? "–" : $"{t.Average:0.0} ms";
-        Range = double.IsNaN(t.Min) ? "" : $"{t.Min:0}–{t.Max:0} ms";
-        Jitter = double.IsNaN(t.Jitter) ? "–" : $"{t.Jitter:0.0} ms";
-        Loss = Pct(t.LossPercent);
-        Series = t.Series();
-        Status = Health(t);
-    }
-
-    static Brush Health(PingTarget t)
-    {
-        if (t.Samples < 3) return Palette.Muted;
-        if (double.IsNaN(t.Average)) return Palette.Bad;
-        bool local = t.Kind == PingKind.Gateway;
-        if (t.LossPercent >= 5 || t.Jitter >= (local ? 5 : 10) || t.Average >= (local ? 10 : 100)) return Palette.Bad;
-        if (t.LossPercent > 0 || t.Jitter >= (local ? 2 : 5) || t.Average >= (local ? 5 : 60)) return Palette.Warn;
-        return Palette.Ok;
-    }
+    public void RaiseRows() => Raise(nameof(HasRows));
 }
 
 public sealed class IssueRow(string key) : ObservableObject

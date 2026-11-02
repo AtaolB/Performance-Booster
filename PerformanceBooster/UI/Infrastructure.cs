@@ -121,7 +121,8 @@ public static class WindowTheme
     }
 }
 
-// Draws the last 60 samples as a line plus an area fading downward. NaN values (lost pings) leave a gap.
+// Draws the last 60 samples as a line plus an area fading downward. NaN values (missing readings) leave a gap.
+// With Format set, hovering shows the value under the mouse and how long ago it was read.
 public sealed class Sparkline : FrameworkElement
 {
     public static readonly DependencyProperty ValuesProperty = DependencyProperty.Register(
@@ -133,12 +134,43 @@ public sealed class Sparkline : FrameworkElement
     public static readonly DependencyProperty MaximumProperty = DependencyProperty.Register(
         nameof(Maximum), typeof(double), typeof(Sparkline), new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    // The range of the values fills the height (a temperature between 60 and 70 °C), instead of starting at zero.
+    public static readonly DependencyProperty FitRangeProperty = DependencyProperty.Register(
+        nameof(FitRange), typeof(bool), typeof(Sparkline), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
     // IReadOnlyList instead of double[]: the XAML compiler rejects binding to an array-typed property inside a template (MC4102).
     public IReadOnlyList<double>? Values { get => (IReadOnlyList<double>?)GetValue(ValuesProperty); set => SetValue(ValuesProperty, value); }
     public Brush Stroke { get => (Brush)GetValue(StrokeProperty); set => SetValue(StrokeProperty, value); }
     public double Maximum { get => (double)GetValue(MaximumProperty); set => SetValue(MaximumProperty, value); }
+    public bool FitRange { get => (bool)GetValue(FitRangeProperty); set => SetValue(FitRangeProperty, value); }
 
     public int Capacity { get; set; } = 60;
+
+    public static readonly DependencyProperty FormatProperty = DependencyProperty.Register(
+        nameof(Format), typeof(Func<double, string>), typeof(Sparkline), new FrameworkPropertyMetadata(null));
+
+    public static readonly DependencyProperty SecondsPerSampleProperty = DependencyProperty.Register(
+        nameof(SecondsPerSample), typeof(double), typeof(Sparkline), new FrameworkPropertyMetadata(1.0));
+
+    public Func<double, string>? Format { get => (Func<double, string>?)GetValue(FormatProperty); set => SetValue(FormatProperty, value); }
+    public double SecondsPerSample { get => (double)GetValue(SecondsPerSampleProperty); set => SetValue(SecondsPerSampleProperty, value); }
+
+    double? _mouseX;
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (Format is null) return;
+        _mouseX = e.GetPosition(this).X;
+        InvalidateVisual();
+    }
+
+    protected override void OnMouseLeave(MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _mouseX = null;
+        InvalidateVisual();
+    }
 
     (Pen Line, Brush Fill)? _pens;
 
@@ -161,8 +193,15 @@ public sealed class Sparkline : FrameworkElement
         if (Values is not { Count: >= 2 } source || ActualWidth <= 0 || ActualHeight <= 0) return;
         var values = source as double[] ?? source.ToArray();
 
-        double max = Maximum;
-        if (double.IsNaN(max))
+        double min = 0, max = Maximum;
+        if (FitRange)
+        {
+            var known = values.Where(v => !double.IsNaN(v)).ToArray();
+            if (known.Length == 0) return;
+            double low = known.Min(), high = known.Max(), pad = Math.Max((high - low) * 0.15, Math.Max(Math.Abs(high) * 0.02, 0.01));
+            (min, max) = (low - pad, high + pad);
+        }
+        else if (double.IsNaN(max))
         {
             max = 1;
             foreach (var v in values) if (!double.IsNaN(v)) max = Math.Max(max, v * 1.15);
@@ -200,6 +239,122 @@ public sealed class Sparkline : FrameworkElement
             dc.DrawGeometry(null, line, stroke);
         }
 
-        Point At(int k) => new(x0 + k * step, h - Math.Clamp(values[k] / max, 0, 1) * (h - 2) - 1);
+        // The sample under the mouse: a marker and its value with its age, kept inside the chart.
+        if (_mouseX is { } mx && Format is { } format)
+        {
+            int k = (int)Math.Round((mx - x0) / step);
+            if (k >= 0 && k < values.Length && !double.IsNaN(values[k]))
+            {
+                var p = At(k);
+                var color = Stroke is SolidColorBrush b ? b.Color : Colors.SteelBlue;
+                dc.DrawLine(new Pen(new SolidColorBrush(Color.FromArgb(90, color.R, color.G, color.B)), 1), new Point(p.X, 0), new Point(p.X, h));
+                dc.DrawEllipse(Stroke, null, p, 3, 3);
+                double ago = (values.Length - 1 - k) * SecondsPerSample;
+                string text = format(values[k]) + " · " + (ago < 0.05 ? T("now") : F("{0} s ago", ago.ToString(ago < 10 ? "0.#" : "0", L.Culture)));
+                var label = new FormattedText(text, L.Culture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+                double lx = Math.Clamp(p.X - label.Width / 2, 0, Math.Max(0, w - label.Width - 8));
+                double ly = p.Y - label.Height - 10 < 0 ? p.Y + 6 : p.Y - label.Height - 10;
+                dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromArgb(230, 22, 27, 34)), new Pen(new SolidColorBrush(color), 1),
+                    new Rect(lx, ly, label.Width + 8, label.Height + 4), 4, 4);
+                dc.DrawText(label, new Point(lx + 4, ly + 2));
+            }
+        }
+
+        Point At(int k) => new(x0 + k * step, h - Math.Clamp((values[k] - min) / (max - min), 0, 1) * (h - 2) - 1);
+    }
+}
+
+// How often a tab reads its values: fixed choices and, with Custom, whole seconds typed by hand (1 to 120).
+public sealed class IntervalSetting : ObservableObject
+{
+    public static readonly double[] Presets = [0.5, 1, 2, 3, 5, 10, 30, 60];
+    public const int MaxCustom = 120;
+
+    double _seconds;
+    bool _custom;
+    string _customText;
+
+    public IntervalSetting(double seconds)
+    {
+        _seconds = Valid(seconds);
+        _custom = !Presets.Contains(_seconds);
+        _customText = ((int)Math.Max(1, _seconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    // Raised with the new interval in seconds.
+    public event Action<double>? Changed;
+
+    public double Seconds => _seconds;
+    public IReadOnlyList<string> Choices { get; } = [.. Presets.Select(Label), T("Custom")];
+    public bool IsCustom => _custom;
+
+    public string Selected
+    {
+        get => _custom ? Choices[^1] : Label(_seconds);
+        set
+        {
+            if (value is null) { RaiseLater(nameof(Selected)); return; }
+            int index = Choices.ToList().IndexOf(value);
+            if (index < 0) return;
+            _custom = index == Presets.Length;
+            Set(_custom ? int.Parse(_customText, System.Globalization.CultureInfo.InvariantCulture) : Presets[index]);
+            Raise(nameof(Selected));
+            Raise(nameof(IsCustom));
+        }
+    }
+
+    // Whole seconds only (the box takes digits only); out of range values are brought into 1 to 120.
+    public string CustomText
+    {
+        get => _customText;
+        set
+        {
+            if (int.TryParse(value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var s))
+            {
+                s = Math.Clamp(s, 1, MaxCustom);
+                _customText = s.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                Set(s);
+            }
+            RaiseLater(nameof(CustomText));
+        }
+    }
+
+    // A saved value that is no longer offered (0.1 s) becomes the shortest choice.
+    static double Valid(double s) => Presets.Contains(s) ? s : s < 1 ? Presets[0] : Math.Clamp(Math.Round(s), 1, MaxCustom);
+
+    public static string Label(double s) => F("{0} s", s.ToString("0.#", L.Culture));
+
+    void Set(double seconds)
+    {
+        if (seconds == _seconds) return;
+        _seconds = seconds;
+        Changed?.Invoke(seconds);
+    }
+}
+
+// ui:InputBox.DigitsOnly="True" on a text box: only the digits 0-9 can be typed or pasted.
+public static class InputBox
+{
+    public static readonly DependencyProperty DigitsOnlyProperty = DependencyProperty.RegisterAttached(
+        "DigitsOnly", typeof(bool), typeof(InputBox), new PropertyMetadata(false, OnChanged));
+
+    public static bool GetDigitsOnly(DependencyObject d) => (bool)d.GetValue(DigitsOnlyProperty);
+    public static void SetDigitsOnly(DependencyObject d, bool value) => d.SetValue(DigitsOnlyProperty, value);
+
+    static void OnChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not System.Windows.Controls.TextBox box || e.NewValue is not true) return;
+        box.PreviewTextInput += (_, args) => args.Handled = !args.Text.All(char.IsAsciiDigit);
+        DataObject.AddPastingHandler(box, (_, args) =>
+        {
+            if (args.DataObject.GetData(typeof(string)) is not string text || !text.All(char.IsAsciiDigit)) args.CancelCommand();
+        });
+        box.PreviewKeyDown += (_, args) => { if (args.Key == Key.Space) args.Handled = true; };
+        // Enter applies the value like leaving the box does.
+        box.KeyDown += (_, args) =>
+        {
+            if (args.Key != Key.Enter) return;
+            box.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty)?.UpdateSource();
+        };
     }
 }

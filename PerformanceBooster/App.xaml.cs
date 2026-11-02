@@ -76,6 +76,7 @@ public partial class App : Application
         L.ApplyToWpf();
         DispatcherUnhandledException += OnUnhandled;
         RemoveReplacedExe();
+        AppPaths.DeleteRequests();
 #if DEBUG
         // Binding errors (wrong property name etc.) are written to a file; the UI test checks this file.
         Directory.CreateDirectory(AppPaths.Folder);
@@ -101,6 +102,7 @@ public partial class App : Application
         _tray.CheckUpdatesRequested += () => _ = vm.CheckAllUpdatesAsync();
         _tray.GameModeToggled += on => vm.GameBoost = on;
         _tray.AutoStartToggled += on => vm.AutoStartEnabled = on;
+        vm.TemperatureWarning += (title, text) => _tray.Notify(title, text, () => { ShowWindow(); vm.SelectedTab = MainViewModel.TabSensors; });
         _tray.ExitRequested += ExitApp;
         vm.PropertyChanged += (_, p) =>
         {

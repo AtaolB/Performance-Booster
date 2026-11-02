@@ -28,6 +28,23 @@ public static class AppPaths
     public static string History => Path.Combine(Folder, "update-history.json");
     public static string Log => Path.Combine(Folder, "last-operation.log");
 
+    // One-time requests for the elevated helper: written just before it starts, deleted as soon as it has finished.
+    public static string DefenderRequest => Path.Combine(Folder, "defender-change.json");
+    public static string LeftoverRequest => Path.Combine(Folder, "leftovers.json");
+
+    internal static void Delete(string path)
+    {
+        try { File.Delete(path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    // Requests left behind by a copy that was closed while the helper ran (or by older versions, which kept them).
+    internal static void DeleteRequests()
+    {
+        Delete(DefenderRequest);
+        Delete(LeftoverRequest);
+    }
+
     // null when the file is missing or cannot be read.
     internal static T? ReadJson<T>(string path, JsonTypeInfo<T> type) where T : class
     {
@@ -97,6 +114,14 @@ public sealed class AppSettings
     public bool DefenderExclude { get; set; }
     public Dictionary<string, string> GamePaths { get; set; } = []; // game list entry ("cs2.exe") -> full path
     public List<string> DefenderExcluded { get; set; } = []; // exclusions the app added (removed again when turned off)
+
+    // Sensors tab: seconds between readings while it is open, and the temperature warnings (checked in the background too).
+    public double SensorIntervalSeconds { get; set; } = 1;
+    public bool TemperatureWarnings { get; set; } // off until turned on on the Sensors tab
+    public double LiveIntervalSeconds { get; set; } = 1;
+    public List<string> PinnedApps { get; set; } = [];
+    public int CpuTempLimit { get; set; } = 95;
+    public int GpuTempLimit { get; set; } = 87;
 
     // Voice chat, streaming, overlays and anti-cheat clients keep their CPU share while a game runs.
     public static readonly string[] DefaultExempt =

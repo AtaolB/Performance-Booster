@@ -231,6 +231,9 @@ public sealed partial class MainViewModel
         if (tab == TabGame) RefreshGameBoost();
         if (tab == TabSystem && TempSize == "…") _ = RefreshSizesAsync();
         if (tab == TabLatency) _ = RefreshInterruptsAsync();
+        if (tab == TabSensors) StartSensors();
+        if (tab == TabLive) StartLiveApps();
+        else StopLiveApps();
     }
 
     // --- Network test ---

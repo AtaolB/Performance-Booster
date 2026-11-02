@@ -86,6 +86,7 @@ static class Runner
             ("System", SystemTests.Run),
             ("GameBoost", GameBoostTests.Run),
             ("Latency", LatencyTests.Run),
+            ("Sensors", SensorTests.Run),
             ("Network", NetworkTests.Run),
             ("Programs", ProgramTests.Run),
             ("Details", DetailTests.Run),

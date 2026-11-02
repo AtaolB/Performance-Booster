@@ -176,7 +176,6 @@ public sealed partial class MainViewModel
         LastCheck = F("Last check {0}", DateTime.Now.ToString("t", L.Culture));
         if (Tweaks.FirstOrDefault(r => r.Id == "power.plan") is { IsAvailable: true } plan) SyncGamePlans(plan.Options);
         await RefreshInterruptsAsync();
-        RefreshPingTargets();
 
         // The view is refreshed only when something that affects the filter changes, so open drop-downs stay open.
         var signature = string.Concat(Tweaks.Select(r => (int)r.State));

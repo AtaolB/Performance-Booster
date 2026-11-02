@@ -140,4 +140,78 @@ public static class Demo
         return new LatencyResult(30, dpcs, isrs, 212, "dxgkrnl.sys", 248, "dxgkrnl.sys",
             [(long)(dpcs * 0.71), (long)(dpcs * 0.255), (long)(dpcs * 0.031), (long)(dpcs * 0.0038), (long)(dpcs * 0.0002), 0, 0], drivers, cpus, 0, null);
     }
+
+    // The running apps on the Live tab while a game runs.
+    public static List<AppUsage> Apps() =>
+    [
+        new("ArenaLegends", 1, 38.4, 6_120_000_000, 91.2, 61_000, 18_000, true),
+        new("Discord", 6, 2.1, 640_000_000, 1.8, 9_000, 7_500, true),
+        new("chrome", 14, 1.6, 1_420_000_000, 0.4, 3_200, 900, true),
+        new("GameLauncher", 3, 0.9, 410_000_000, 0, 1_200_000, 40_000, true),
+        new("obs64", 1, 3.4, 380_000_000, 6.5, 0, 0, true),
+        new("dwm", 1, 1.2, 160_000_000, 2.1, 0, 0, false),
+        new("explorer", 1, 0.3, 120_000_000, 0, 0, 0, true),
+        new("MsMpEng", 1, 0.2, 210_000_000, 0, 0, 0, false),
+        new("svchost", 78, 0.6, 520_000_000, 0, 2_000, 1_000, false),
+    ];
+
+    // A desktop computer under a light game load; the values drift slowly so the charts move.
+    public static IReadOnlyList<SensorReading> Sensors(bool light)
+    {
+        double t = DateTime.Now.TimeOfDay.TotalSeconds;
+        double Wave(double mid, double amp, double period, double phase = 0) => Math.Round(mid + amp * Math.Sin(t / period * 2 * Math.PI + phase), 3);
+        var list = new List<SensorReading>();
+        void Add(string device, DeviceKind kind, SensorKind sensor, string name, double value) =>
+            list.Add(new($"/demo/{device}/{sensor}/{name}", "/demo/" + device, device, kind, sensor, name, value));
+
+        const string cpu = "AMD Ryzen 7 7800X3D", gpu = "NVIDIA " + Gpu;
+        Add(cpu, DeviceKind.Processor, SensorKind.Temperature, "Core (Tctl/Tdie)", Wave(68, 4, 40));
+        Add(cpu, DeviceKind.Processor, SensorKind.Temperature, "CCD1 (Tdie)", Wave(64, 4, 40, 0.3));
+        for (int i = 1; i <= 8; i++) Add(cpu, DeviceKind.Processor, SensorKind.Clock, $"Core #{i}", Wave(4950 - i * 12, 40, 7, i));
+        Add(cpu, DeviceKind.Processor, SensorKind.Voltage, "Core (SVI2 TFN)", Wave(1.212, 0.02, 9));
+        Add(cpu, DeviceKind.Processor, SensorKind.Power, "Package", Wave(72, 8, 20));
+        Add(cpu, DeviceKind.Processor, SensorKind.Load, "CPU Total", Wave(38, 9, 15));
+        for (int i = 1; i <= 8; i++) Add(cpu, DeviceKind.Processor, SensorKind.Load, $"CPU Core #{i}", Wave(42 - i * 3, 10, 5, i));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Temperature, "GPU Core", Wave(66, 3, 50));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Temperature, "GPU Hot Spot", Wave(78, 3, 50));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Temperature, "GPU Memory Junction", Wave(72, 2, 60));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Clock, "GPU Core", Wave(2655, 30, 6));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Clock, "GPU Memory", 11201);
+        Add(gpu, DeviceKind.Graphics, SensorKind.Voltage, "GPU Core", Wave(1.035, 0.01, 8));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Power, "GPU Package", Wave(238, 25, 18));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Load, "GPU Core", Wave(91, 5, 11));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Load, "GPU Memory", Wave(64, 2, 30));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Fan, "GPU Fan 1", Wave(1480, 60, 45));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Fan, "GPU Fan 2", Wave(1510, 60, 45, 0.4));
+        Add(gpu, DeviceKind.Graphics, SensorKind.Control, "GPU Fan", Wave(46, 2, 45));
+        Add(gpu, DeviceKind.Graphics, SensorKind.SmallData, "GPU Memory Used", Wave(10420, 120, 90));
+        if (light) return list;
+
+        const string chip = "Nuvoton NCT6799D";
+        Add(chip, DeviceKind.Controller, SensorKind.Temperature, "Motherboard", Wave(38, 0.5, 120));
+        Add(chip, DeviceKind.Controller, SensorKind.Temperature, "CPU Socket", Wave(46, 1, 90));
+        Add(chip, DeviceKind.Controller, SensorKind.Temperature, "Chipset", Wave(52, 0.6, 100));
+        Add(chip, DeviceKind.Controller, SensorKind.Voltage, "+12V", Wave(12.096, 0.01, 30));
+        Add(chip, DeviceKind.Controller, SensorKind.Voltage, "+5V", Wave(5.04, 0.005, 25));
+        Add(chip, DeviceKind.Controller, SensorKind.Voltage, "+3.3V", Wave(3.344, 0.004, 28));
+        Add(chip, DeviceKind.Controller, SensorKind.Voltage, "DRAM", 1.352);
+        Add(chip, DeviceKind.Controller, SensorKind.Fan, "CPU Fan", Wave(1120, 70, 40));
+        Add(chip, DeviceKind.Controller, SensorKind.Fan, "Pump", Wave(2610, 20, 60));
+        Add(chip, DeviceKind.Controller, SensorKind.Fan, "System Fan #1", Wave(940, 30, 50));
+        Add(chip, DeviceKind.Controller, SensorKind.Fan, "System Fan #2", Wave(955, 30, 50, 0.5));
+        Add(chip, DeviceKind.Controller, SensorKind.Control, "CPU Fan", Wave(48, 3, 40));
+        const string memory = "Total Memory", disk = "NVMe SSD 2TB";
+        Add(memory, DeviceKind.Memory, SensorKind.Load, "Memory", Wave(46, 1, 120));
+        Add(memory, DeviceKind.Memory, SensorKind.Data, "Memory Used", Wave(14.7, 0.3, 120));
+        Add(memory, DeviceKind.Memory, SensorKind.Data, "Memory Available", Wave(17.3, 0.3, 120, Math.PI));
+        Add("DIMM #1", DeviceKind.Memory, SensorKind.Temperature, "Temperature", Wave(43, 0.5, 100));
+        Add("DIMM #2", DeviceKind.Memory, SensorKind.Temperature, "Temperature", Wave(44, 0.5, 100, 1));
+        Add(disk, DeviceKind.Storage, SensorKind.Temperature, "Composite Temperature", Wave(41, 1, 80));
+        Add(disk, DeviceKind.Storage, SensorKind.Temperature, "Warning Temperature", 82);
+        Add(disk, DeviceKind.Storage, SensorKind.Level, "Life", 98);
+        Add(disk, DeviceKind.Storage, SensorKind.Load, "Used Space", 38.6);
+        Add(disk, DeviceKind.Storage, SensorKind.Throughput, "Read Rate", Math.Max(0, Wave(18_000_000, 22_000_000, 13)));
+        Add(disk, DeviceKind.Storage, SensorKind.Throughput, "Write Rate", Math.Max(0, Wave(2_000_000, 3_000_000, 17)));
+        return list;
+    }
 }

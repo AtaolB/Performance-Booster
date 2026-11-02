@@ -27,13 +27,15 @@
 - **Oyunların nasıl çalıştığını etkileyen her şey tek pencerede:** anlık kullanım, Windows ayarları, sürücü ve uygulama güncellemeleri, ağ kalitesi, giriş gecikmesi.
 - **Her değişiklik geri alınabilir.** Bir ayar ilk kez değiştirilmeden önce eski değeri kaydedilir; Geri al onu geri koyar. Toplu değişikliklerden önce geri yükleme noktası oluşturulur.
 - **Tahmin etmez, açıklar.** Her ayar ne yaptığını, neye mal olduğunu ve önerilen değeri söyler; sorunlar Düzelt düğmesiyle gelir.
-- **Küçük.** Kendini güncel tutan ~2 MB'lık tek bir exe.
+- **Küçük.** Kendini güncel tutan ~3,5 MB'lık tek bir exe.
 
 ## Özellikler
 
 | | |
 |---|---|
-| **Canlı** | Genel bakış: 60 saniyelik grafiklerle işlemci, RAM, ekran kartı, disk ve ağ; modeme ve kullanılan DNS sunucusuna ping, dalgalanma ve kayıp; düzeltmeleriyle sorunlar paneli (üstteki sorun sayısına tıklayınca açılır). Bir karta tıklayınca o kaynağı en çok kullanan uygulamalar görünür, uygulama başına ağ trafiği dahil. |
+| **Canlı** | Grafikler ve sıcaklıklarla işlemci, RAM, ekran kartı, disk ve ağ (o anki değer için grafiğin üzerine gel), ayrıca çalışan her uygulama simgesiyle ve işlemci, bellek, disk, ekran kartı ve ağ kullanımıyla: arama, istenen sütuna göre sıralama, en üste sabitleme ve okuma sıklığı seçimi. |
+| **Sorunlar** | Oyunları şu an yavaşlatanlar, nerede çözüleceğine göre gruplu: ayarlar, ağ, cihazlar, güncellemeler ve sistem; Düzelt ya da Git düğmesiyle. BIOS'ta ya da donanımla değiştirilenler (bellek profili, Resizable BAR) sorun değil, not olarak gösterilir. |
+| **Sensörler** | Bilgisayarın tüm sensörleri cihaz cihaz: sıcaklıklar, fanlar, voltajlar, saat hızları, güç ve yük; her biri şu anki, en düşük, en yüksek ve ortalama değeri ve grafiğiyle. Okuma aralığı 0,5 saniyeden bir saate kadar ayarlanabilir. İşlemci ya da ekran kartı çok ısınınca uyarı; oyun açıkken de. |
 | **İşlemler** | Çalışan tüm uygulamalar; işlemci, RAM, disk, ekran kartı ve bağlantı sayısıyla. Sıralamak için sütuna tıkla, ara ya da görevi sonlandır. Bir satıra sağ tıklayınca (ya da ⋯) önceliğini değiştir, oyun listesine ekle, oyun açıkken tam hızda tut ya da dosya konumunu aç. |
 | **Güncellemeler** | winget ile uygulama güncellemeleri (sabitle, sürümü atla, ayrıntılar); açık uygulamalar yalnızca iznini alarak kapatılır. Güncellemeleri tek tek ya da hepsini birden iptal et. Windows Update ile sürücü güncellemeleri; Denetle ikisine de bakar. |
 | **Programlar** | Boyutu, kurulum tarihi ve son kullanımıyla masaüstü programları ve Store uygulamaları; sıralamak için sütuna tıkla. Mümkünse sessiz kaldırma, artık taraması (dosyalar Geri Dönüşüm Kutusu'na gider, kayıt defteri anahtarları önce yedeklenir) ve dosyaları zaten silinmiş bozuk kayıtların kaldırılması. |
@@ -136,7 +138,9 @@ dotnet publish PerformanceBooster.Launcher -c Release -o out   # out\Performance
 
 `dotnet publish PerformanceBooster.Launcher` yayınlanan exe'yi derler; uygulama onun içinde paketlenir. Yayın iş akışı `-p:PublishAot=true` ekler (Visual Studio'nun C++ derleme araçlarını ister).
 
-Test bölümleri: Localization, Engine, Updates, AppUpdate, Changelog, System, GameBoost, Latency, Network, Programs, Details, App. Testler gerçek sistem ayarlarını hiç değiştirmez: sahte depolar, `HKCU\Software\PerformanceBoosterTests` altında geçici kayıt defteri anahtarları, geçici klasörler ve sahte işlemler kullanır. `PERFORMANCEBOOSTER_DATA` uygulamayı ayrı bir veri klasörüne yönlendirir.
+Test bölümleri: Localization, Engine, Updates, AppUpdate, Changelog, System, GameBoost, Latency, Sensors, Network, Programs, Details, App. Testler gerçek sistem ayarlarını hiç değiştirmez: sahte depolar, `HKCU\Software\PerformanceBoosterTests` altında geçici kayıt defteri anahtarları, geçici klasörler ve sahte işlemler kullanır. `PERFORMANCEBOOSTER_DATA` uygulamayı ayrı bir veri klasörüne yönlendirir.
+
+Üçüncü taraf kodu: Sensörler sekmesi [LibreHardwareMonitorLib](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) kullanır (MPL-2.0; kaynak kodu bu bağlantıda).
 
 **Yayınlama:** `main`'e giren her değişiklik `PerformanceBooster/PerformanceBooster.csproj` içindeki `<Version>` değerini artırır ve notlarını hem [CHANGELOG.md](CHANGELOG.md) hem [CHANGELOG.tr.md](CHANGELOG.tr.md) dosyasının en üstüne ekler (Changelog testleri bunu denetler). Yayını olmayan bir sürüm `main`'e gelince [yayın iş akışı](.github/workflows/release.yml) testleri çalıştırır, exe'yi derler ve bu notlarla `v<sürüm>` yayınlar. Çalışan kopyalar onu bulup kendini günceller.
 

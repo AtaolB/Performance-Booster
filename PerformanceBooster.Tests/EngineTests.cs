@@ -18,6 +18,16 @@ static class EngineTests
     {
         Fixtures.OnCleanup(() => Reg.DeleteTree(HKCU, Key));
 
+        Runner.Test("Requests for the elevated copy are not left behind", () =>
+        {
+            Directory.CreateDirectory(AppPaths.Folder);
+            File.WriteAllText(AppPaths.DefenderRequest, "{}");
+            File.WriteAllText(AppPaths.LeftoverRequest, "{}");
+            AppPaths.DeleteRequests();
+            Check.True(!File.Exists(AppPaths.DefenderRequest) && !File.Exists(AppPaths.LeftoverRequest), "both deleted");
+            AppPaths.DeleteRequests(); // nothing there: no error
+        });
+
         Runner.Test("Option matching and state", () =>
         {
             TweakOption[] options = [Catalog.Rec("off", "Off", "0", [null]), Catalog.Opt("on", "On", "1", "2")];

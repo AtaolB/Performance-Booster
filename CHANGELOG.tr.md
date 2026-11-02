@@ -2,6 +2,15 @@
 
 Performance Booster'ın her sürümü ve getirdikleri. English: [CHANGELOG.md](CHANGELOG.md).
 
+## 1.1.0 - 2026-11-02
+
+### Yeni
+- Sensörler sekmesi: bilgisayarın tüm sensörleri cihaz cihaz (işlemci, ekran kartı, anakart, bellek, diskler, ağ, pil): sıcaklıklar, fanlar, voltajlar, saat hızları, güç, yük ve daha fazlası; her biri şu anki, en düşük, en yüksek ve ortalama değeriyle. Cihazlar kapalı gelir ve yalnızca açık olanlar okunur. Grafiğini görmek için bir satıra tıkla. 0,5 ile 60 saniye arasında ya da yazdığın 1-120 tam saniyede bir okunur.
+- Canlı: işlemci, ekran kartı ve disk kartları sıcaklıklarını da gösterir.
+- Canlı: çalışan her uygulama simgesiyle ve işlemci, bellek, disk okuma ve yazma, ekran kartı ve ağ kullanımıyla kartların altında sürekli görünür. Adla ara, sıralamak için sütun başlığına tıkla, uygulamaları en üstte tutmak için sabitle. Kartlar ve liste 0,5 ile 60 saniye arasında (ya da yazdığın 1-120 tam saniyede) bir okunur; oyun açıkken ya da pencere başka bir pencerenin arkasındayken hiçbir şey okunmaz. O anki değeri görmek için kartın grafiğinin üzerine gel. Kartlar artık ayrıntı paneli açmaz ve modem pingi kaldırıldı.
+- Sorunlar sekmesi: sorunlar Canlı sekmesinden kendi sekmesine taşındı ve nerede çözüleceklerine göre gruplandı (ayarlar, ağ, cihazlar, güncellemeler, sistem). Bellek profili, Resizable BAR ve BIOS'ta ya da donanımla değiştirilen diğer şeyler sorun değil, not olarak gösterilir.
+- Yüksek sıcaklık uyarısı (Sensörler sekmesinden açana kadar kapalı): işlemci ya da ekran kartı sınırında veya üstünde kalınca bildirim; oyun açıkken ve pencere kapalıyken de. Sınırlar değiştirilebilir.
+
 ## 1.0.2 - 2026-11-02
 
 ### Yeni

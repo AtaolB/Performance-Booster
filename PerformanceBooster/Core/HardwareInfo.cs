@@ -3,7 +3,8 @@ using Microsoft.Win32;
 
 namespace PerformanceBooster.Core;
 
-public sealed record InfoItem(string Group, string Label, string Value, CheckState State = CheckState.Ok, string? Hint = null, string? Uri = null);
+// Note: changed in the BIOS or with the hardware itself (memory profile, Resizable BAR, modules, slots); shown as information, not as an issue.
+public sealed record InfoItem(string Group, string Label, string Value, CheckState State = CheckState.Ok, string? Hint = null, string? Uri = null, bool Note = false);
 
 // Hardware and system state, with hints for problems that affect game performance.
 public static class HardwareInfo
@@ -95,13 +96,13 @@ public static class HardwareInfo
         items.Add(new(GroupMemory, T("Total"), F("{0} GB {1} · {2} MT/s · {3} module|{0} GB {1} · {2} MT/s · {3} modules", (total / 1073741824.0).ToString("0", L.Culture), kind, speed, modules.Count)));
 
         if (modules.Count == 1 && type is 26 or 34 or 24)
-            items.Add(new(GroupMemory, T("Channel"), T("most likely single channel"), CheckState.Problem,
-                T("Only one memory module is installed. Adding a second identical module (dual channel) noticeably raises FPS in games.")));
+            items.Add(new(GroupMemory, T("Channel"), T("most likely single channel"), CheckState.Info,
+                T("Only one memory module is installed. Adding a second identical module (dual channel) noticeably raises FPS in games."), Note: true));
 
         bool jedec = (type == 26 && speed <= 2666) || (type == 34 && speed <= 4800);
         if (IsDesktop() && jedec)
-            items.Add(new(GroupMemory, T("Speed profile"), F("{0} MT/s (standard speed)", speed), CheckState.Problem,
-                T("On this desktop the memory runs at standard speed. Turn on the XMP (Intel) or EXPO (AMD) profile in the BIOS.")));
+            items.Add(new(GroupMemory, T("Speed profile"), F("{0} MT/s (standard speed)", speed), CheckState.Info,
+                T("On this desktop the memory runs at standard speed. Turn on the XMP (Intel) or EXPO (AMD) profile in the BIOS."), Note: true));
     }
 
     static void Graphics(List<InfoItem> items)
@@ -132,13 +133,13 @@ public static class HardwareInfo
         {
             items.Add(new(GroupGpu, cards.Count > 1 ? F("PCIe link ({0})", device.Name) : T("PCIe link"),
                 F("x{0} · up to PCIe {1}.0", link!.Width, link.MaxSpeed) + (link.FewerLanes ? " " + F("(the card supports x{0})", link.MaxWidth) : ""),
-                link.FewerLanes ? CheckState.Problem : CheckState.Ok,
-                link.FewerLanes ? T("The card runs with fewer PCIe lanes than it supports. Put it in the top x16 slot; on some boards an M.2 drive or a second card shares its lanes.") : null));
+                link.FewerLanes ? CheckState.Info : CheckState.Ok,
+                link.FewerLanes ? T("The card runs with fewer PCIe lanes than it supports. Put it in the top x16 slot; on some boards an M.2 drive or a second card shares its lanes.") : null, Note: link.FewerLanes));
         }
 
         if (ResizableBar() is { } rebar)
-            items.Add(new(GroupGpu, T("Resizable BAR"), rebar ? T("on") : T("off"), rebar ? CheckState.Ok : CheckState.Problem,
-                rebar ? null : T("The processor can reach only 256 MB of the video memory at once. Turn on Above 4G Decoding and Re-Size BAR Support in the BIOS (CSM off); some games gain a few percent.")));
+            items.Add(new(GroupGpu, T("Resizable BAR"), rebar ? T("on") : T("off"), rebar ? CheckState.Ok : CheckState.Info,
+                rebar ? null : T("The processor can reach only 256 MB of the video memory at once. Turn on Above 4G Decoding and Re-Size BAR Support in the BIOS (CSM off); some games gain a few percent."), Note: !rebar));
 
         var (cur, max, w, h) = SystemInfo.RefreshRate();
         if (cur > 0)

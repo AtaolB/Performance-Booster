@@ -113,11 +113,50 @@ public sealed partial class LeftoverRow(Leftover item) : ObservableObject
     public bool IsSelected { get => _selected; set => Set(ref _selected, value); }
 }
 
-// Live card details: a process (same names combined) and its usage of that resource.
-public sealed record UsageRow(string Name, int Instances, string Primary, string Secondary, string Third, double Share, bool CanKill)
+// An app on the Live tab; kept between refreshes and updated in place.
+public sealed class LiveAppRow(string name) : ObservableObject
 {
-    public string Count => Instances > 1 ? $"x{Instances}" : "";
-    public double SharePercent => Math.Clamp(Share * 100, 0, 100);
+    string _count = "", _cpu = "", _ram = "", _read = "", _write = "", _gpu = "", _down = "", _up = "";
+    bool _canKill, _pinned;
+    ImageSource? _icon;
+
+    public string Name { get; } = name;
+    public AppUsage Usage { get; private set; } = new(name, 1, 0, 0, 0, 0, 0, false);
+    public int Instances => Usage.Count;
+    public string Count { get => _count; private set => Set(ref _count, value); }
+    public string Cpu { get => _cpu; private set => Set(ref _cpu, value); }
+    public string Ram { get => _ram; private set => Set(ref _ram, value); }
+    public string Read { get => _read; private set => Set(ref _read, value); }
+    public string Write { get => _write; private set => Set(ref _write, value); }
+    public ImageSource? Icon { get => _icon; set { if (Set(ref _icon, value)) { Raise(nameof(HasIcon)); Raise(nameof(NoIcon)); } } }
+    public bool HasIcon => _icon is not null;
+    public bool NoIcon => _icon is null;
+    public bool IsPinned { get => _pinned; set { if (Set(ref _pinned, value)) Raise(nameof(PinText)); } }
+    public string PinText => _pinned ? T("Unpin") : T("Pin to the top");
+    public string Gpu { get => _gpu; private set => Set(ref _gpu, value); }
+    public string Down { get => _down; private set => Set(ref _down, value); }
+    public string Up { get => _up; private set => Set(ref _up, value); }
+    public bool CanKill { get => _canKill; private set => Set(ref _canKill, value); }
+
+    public void Update(AppUsage u, bool hasNet)
+    {
+        Usage = u;
+        Count = u.Count > 1 ? $"x{u.Count}" : "";
+        Cpu = Pct(u.CpuPercent, "0.0");
+        Ram = u.RamBytes >= 1073741824 ? (u.RamBytes / 1073741824.0).ToString("0.0", L.Culture) + " GB" : (u.RamBytes / 1048576.0).ToString("0", L.Culture) + " MB";
+        Read = Bytes(u.ReadPerSec);
+        Write = Bytes(u.WritePerSec);
+        Gpu = u.GpuPercent > 0.05 ? Pct(u.GpuPercent, "0.0") : "–";
+        Down = hasNet ? Bits(u.Down) : "–";
+        Up = hasNet ? Bits(u.Up) : "–";
+        CanKill = u.CanKill;
+    }
+
+    static string Bytes(double perSec) => perSec >= 1048576 ? (perSec / 1048576.0).ToString("0.0", L.Culture) + " MB/s"
+        : perSec >= 1024 ? (perSec / 1024.0).ToString("0", L.Culture) + " KB/s" : perSec > 0 ? "< 1 KB/s" : "–";
+
+    static string Bits(long bytesPerSec) => bytesPerSec * 8 >= 1e6 ? (bytesPerSec * 8 / 1e6).ToString("0.0", L.Culture) + " Mbps"
+        : bytesPerSec * 8 >= 1e3 ? (bytesPerSec * 8 / 1e3).ToString("0", L.Culture) + " kbps" : bytesPerSec > 0 ? "< 1 kbps" : "–";
 }
 
 // Program icons: DisplayIcon for desktop programs (exe/dll/ico + index), the package logo for Store apps.
@@ -131,6 +170,13 @@ static partial class ProgramIcons
     private static partial bool DestroyIcon(IntPtr icon);
 
     static readonly Dictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
+
+    // The icon of a running app's exe; may be called from a background thread (the result is frozen).
+    public static ImageSource? ForExe(string path)
+    {
+        try { return FromFile(path, 0); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or COMException) { return null; }
+    }
 
     public static ImageSource? Get(InstalledProgram p)
     {
@@ -165,7 +211,8 @@ static partial class ProgramIcons
     static ImageSource? FromFile(string file, int index)
     {
         var key = $"{file}|{index}";
-        if (Cache.TryGetValue(key, out var cached)) return cached;
+        lock (Cache)
+            if (Cache.TryGetValue(key, out var cached)) return cached;
         ImageSource? result = null;
         var large = new IntPtr[1];
         if (ExtractIconEx(file, index, large, null, 1) > 0 && large[0] != IntPtr.Zero)
@@ -181,13 +228,14 @@ static partial class ProgramIcons
                 DestroyIcon(large[0]);
             }
         }
-        Cache[key] = result;
+        lock (Cache) Cache[key] = result;
         return result;
     }
 
     static ImageSource? Picture(string file)
     {
-        if (Cache.TryGetValue(file, out var cached)) return cached;
+        lock (Cache)
+            if (Cache.TryGetValue(file, out var cached)) return cached;
         ImageSource? result = null;
         if (File.Exists(file))
         {
@@ -200,7 +248,7 @@ static partial class ProgramIcons
             image.Freeze();
             result = image;
         }
-        Cache[file] = result;
+        lock (Cache) Cache[file] = result;
         return result;
     }
 
