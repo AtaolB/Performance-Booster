@@ -134,6 +134,8 @@ public sealed partial class MainViewModel
             try { AutoStart.Enabled = value; }
             catch (Exception ex) { Message = F("Could not change the startup setting: {0}", ex.Message); }
             Raise(nameof(AutoStartEnabled));
+            // Without administrator rights the app's own Run entry is in the startup list.
+            if (_startupLoaded) _ = RefreshStartupAsync();
         }
     }
 

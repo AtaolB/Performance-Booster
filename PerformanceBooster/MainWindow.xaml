@@ -290,6 +290,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE839;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                         <TextBlock Text="{ui:T 'PING AND LATENCY'}" Style="{StaticResource CardTitle}"/>
+                                        <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Ping is the time a small packet needs to reach the target and come back. Jitter is how much the ping changes from one measurement to the next: high jitter makes a game feel uneven even when the average is low. Loss is the share of packets that never came back. On a cable the router row usually stays below 1-2 ms with almost no jitter; Wi-Fi adds a few milliseconds.'}"/>
                                     </StackPanel>
                                     <Grid Margin="0,14,0,2">
                                         <Grid.ColumnDefinitions>
@@ -488,7 +489,10 @@
                                     </Button>
                                 </WrapPanel>
                                 <WrapPanel Margin="0,14,0,0">
-                                    <CheckBox Content="{ui:T 'Include apps with unknown versions'}" IsChecked="{Binding IncludeUnknown}" Margin="0,0,24,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                                        <CheckBox Content="{ui:T 'Include apps with unknown versions'}" IsChecked="{Binding IncludeUnknown}"/>
+                                        <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Some apps do not tell Windows their version, so winget cannot tell whether an update is newer. With this on they are listed anyway, and updating may install the same version again.'}"/>
+                                    </StackPanel>
                                     <CheckBox Content="{ui:T 'Microsoft Store apps'}" IsChecked="{Binding IncludeStore}" Margin="0,0,24,0"/>
                                     <CheckBox Content="{ui:T 'Silent install (no installer window)'}" IsChecked="{Binding SilentInstall}"/>
                                 </WrapPanel>
@@ -844,7 +848,10 @@
                                         ToolTip="{ui:T 'Returns every setting the app changed to its value from before the change.'}"/>
                             </WrapPanel>
                             <WrapPanel Margin="0,14,0,0">
-                                <CheckBox Content="{ui:T 'Create a restore point before bulk changes'}" IsChecked="{Binding RestorePointBeforeBulk}" Margin="0,0,24,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                                    <CheckBox Content="{ui:T 'Create a restore point before bulk changes'}" IsChecked="{Binding RestorePointBeforeBulk}"/>
+                                    <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'A restore point is a snapshot of Windows\' system files, drivers and registry. If something goes wrong after many changes, System Restore brings the computer back to that point; your personal files are not touched. Creating one can take up to a minute.'}"/>
+                                </StackPanel>
                                 <CheckBox Content="{ui:T 'Only settings that differ from recommended'}" IsChecked="{Binding OnlyDifferent}" Margin="0,0,24,0"/>
                                 <CheckBox Content="{ui:T 'Also show settings this computer does not have'}" IsChecked="{Binding ShowUnavailable}"/>
                             </WrapPanel>
@@ -897,7 +904,16 @@
                                                     <Border DockPanel.Dock="Right" CornerRadius="8" Padding="7,0" Margin="8,1,0,0" BorderThickness="1" BorderBrush="{Binding ImpactBrush}" VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding ImpactText}" FontSize="10.5" Foreground="{Binding ImpactBrush}"/>
                                                     </Border>
-                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <!-- The (i) follows the title; a left-aligned grid with a star column cuts a long title, never the (i). -->
+                                                    <Grid HorizontalAlignment="Left">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Column="1" Style="{StaticResource InfoIcon}" ToolTip="{Binding Info}"
+                                                                   Visibility="{Binding HasInfo, Converter={StaticResource BoolToVis}}"/>
+                                                    </Grid>
                                                 </DockPanel>
                                                 <TextBlock Text="{Binding Description}" Style="{StaticResource SubText}" TextWrapping="Wrap" TextTrimming="WordEllipsis"
                                                            MaxHeight="32" Margin="0,3,0,0"/>
@@ -950,6 +966,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xEC4A;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                     <TextBlock Text="{ui:T 'SPEED AND LATENCY UNDER LOAD (BUFFERBLOAT)'}" Style="{StaticResource CardTitle}"/>
+                                    <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Bufferbloat: when the line is full, the router queues packets in large buffers instead of dropping them, and game packets wait behind the download. The grade is based on how much the latency rises under load: A+ below 5 ms, A below 30 ms, B below 60 ms, C below 200 ms, D below 400 ms, F above that. QoS/SQM on the router keeps the queue short.'}"/>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,14"
                                            Text="{ui:T 'Measures ping while filling the line with download and then upload for the chosen time each. If ping rises in games while someone at home downloads, the cause shows up here. A longer test is steadier but uses more data (Cloudflare; up to 50 MB per second of test).'}"/>
@@ -1000,6 +1017,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE968;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                     <TextBlock Text="{ui:T 'DNS SPEED TEST'}" Style="{StaticResource CardTitle}"/>
+                                    <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'DNS turns names like example.com into the addresses computers connect to. It is used when a launcher, site or server list loads, not during play, so it does not change ping. Encrypted means DNS over HTTPS: the questions travel encrypted, so the network and the internet provider cannot see or change them.'}"/>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,14"
                                            Text="{ui:T 'Asks every DNS server for the same 10 domains, the normal way and encrypted. Use this switches the connection to that server (encrypted when Windows supports it) and clears the DNS cache.'}"/>
@@ -1226,6 +1244,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE916;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                         <TextBlock Text="{ui:T 'TIMER RESOLUTION'}" Style="{StaticResource CardTitle}"/>
+                                        <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Windows normally wakes up waiting programs in steps of about 15.6 ms. A finer resolution makes these waits more accurate, so FPS limits and frame pacing are more even. It does not raise the FPS by itself; the processor rests less often, so a laptop uses a little more power.'}"/>
                                     </StackPanel>
                                     <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,14"
                                                Text="{ui:T 'Asks Windows for a finer timer, so frames and input are timed more precisely. Held the whole time the app runs, also in the tray; when the app starts with Windows, it is set right after sign-in. Uses a little more power.'}"/>
@@ -1253,6 +1272,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE950;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                         <TextBlock Text="{ui:T 'BACKGROUND APPS'}" Style="{StaticResource CardTitle}"/>
+                                        <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Priority decides which app gets the processor first when several want it at the same moment. Efficiency mode also runs the app\'s work at lower clocks and, on processors with P-cores and E-cores, mostly on the E-cores. Downloads, launchers and browsers keep working; they just do not take time from the game.'}"/>
                                     </StackPanel>
                                     <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,14"
                                                Text="{ui:T 'While a game runs, the other apps get low priority and Windows efficiency mode (the leaf in Task Manager): they use the processor only when the game leaves it free. Restored when the game closes. System processes and apps that raised their own priority are not touched.'}"/>
@@ -1271,6 +1291,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xEA18;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                         <TextBlock Text="{ui:T 'WINDOWS DEFENDER'}" Style="{StaticResource CardTitle}"/>
+                                        <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'Real-time protection scans each file when a program opens it. Games open thousands of files while loading, so the scan can lengthen loading screens and cause hitches when a new area loads. An exclusion is safe for games from trusted stores; downloads and all other apps stay scanned.'}"/>
                                     </StackPanel>
                                     <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,14"
                                                Text="{ui:T 'Instead of turning Defender off, the listed games are excluded: the files a game opens are not scanned in real time, so loading is not slowed down. Everything else stays protected. Each game is excluded by its full path, learned the first time it runs.'}"/>
@@ -1291,6 +1312,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xEEA0;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                     <TextBlock Text="{ui:T 'RAM CLEANING (STANDBY LIST)'}" Style="{StaticResource CardTitle}"/>
+                                    <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'The standby list holds data from files read recently. It counts as available memory and Windows hands it to apps when they need it, so it is normally useful. On some computers this hand-over is too slow while a game loads fast; emptying the list in advance prevents that, but those files then have to be read from the disk again. Turn it on only if games stutter when free memory is low.'}"/>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,14"
                                            Text="{ui:T 'Windows keeps recently used files and closed apps in the standby list. While a game runs, the list is emptied when it is large and free memory runs low, so the game does not wait for memory to be freed.'}"/>
@@ -1371,16 +1393,28 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
+                    <!-- The app itself: the same setting as on the Game mode tab and in the tray menu. -->
                     <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                        <DockPanel>
+                            <Image DockPanel.Dock="Left" Source="/Assets/logo.png" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Top" Margin="0,1,14,0"/>
+                            <StackPanel>
+                                <CheckBox Content="{ui:T 'Start Performance Booster with Windows'}" IsChecked="{Binding AutoStartEnabled}" FontWeight="SemiBold"/>
+                                <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="27,3,0,0"
+                                           Text="{ui:T 'Starts in the tray at sign-in without opening the window, so game mode, the finer timer and update checks work from the first minute.'}"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,8">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="{ui:T 'Refresh'}" Command="{Binding RefreshStartupCommand}" Style="{StaticResource SmallButton}" VerticalAlignment="Center"/>
                             <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"
                                        Text="{ui:T 'Apps that start with Windows. Disabling unneeded ones speeds up startup and reduces background RAM/CPU usage. Same method as Task Manager: the app is not removed, it just does not start at sign-in.'}"/>
                         </DockPanel>
                     </Border>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
                         <ItemsControl ItemsSource="{Binding StartupItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -1626,6 +1660,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE9D9;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                     <TextBlock Text="{ui:T 'DRIVER LATENCY (DPC / ISR)'}" Style="{StaticResource CardTitle}"/>
+                                    <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'First the driver runs a short interrupt routine (ISR), then it hands the rest of the work to a DPC; both run ahead of every program on that core. Longest values: below 500 µs is fine, 500-1000 µs can cause short hitches or crackling sound, above 1000 µs is a problem. Update the driver at the top of the list first; if the problem started with a new version, go back to the previous one.'}"/>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,14"
                                            Text="{ui:T 'Windows reports how long each driver\'s deferred procedure calls (DPC) and interrupt routines (ISR) run. While one runs, the processor core does nothing else, so long ones delay the mouse, sound and frames. Measure with other programs closed, then again while playing.'}"/>
@@ -1686,7 +1721,10 @@
                                         </StackPanel>
                                         <!-- Driver time per processor: one tile per core, the bar relative to the busiest one. -->
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="{ui:T 'DRIVER TIME PER PROCESSOR'}" Style="{StaticResource CardTitle}" FontSize="11" Margin="0,0,0,8"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                <TextBlock Text="{ui:T 'DRIVER TIME PER PROCESSOR'}" Style="{StaticResource CardTitle}" FontSize="11"/>
+                                                <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'The interrupts and DPCs of most devices run on the first cores, often on core 0, which also runs game threads. A core with much more driver time than the others is busy with drivers; MSI mode or a newer driver can spread or shorten that work.'}"/>
+                                            </StackPanel>
                                             <ItemsControl ItemsSource="{Binding CpuLatencies}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
@@ -1759,6 +1797,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE962;" Style="{StaticResource Icon}" Foreground="{StaticResource Accent}" Margin="0,0,8,0"/>
                                         <TextBlock Text="{ui:T 'MOUSE POLLING'}" Style="{StaticResource CardTitle}"/>
+                                        <TextBlock Style="{StaticResource InfoIcon}" ToolTip="{ui:T 'The polling rate is how many times per second the mouse reports its movement: 125 Hz is every 8 ms, 1000 Hz every 1 ms. A higher rate makes movement smoother and shortens the delay. Spread shows how evenly the reports arrive; a large spread or a low share on time points to the USB port, a hub or the wireless connection.'}"/>
                                     </StackPanel>
                                     <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,12"
                                                Text="{ui:T 'Start the test and move the mouse quickly in circles over this window for a few seconds. Shows the real polling rate and how evenly the reports arrive; uneven reports also mean less smooth games.'}"/>

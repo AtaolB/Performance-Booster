@@ -2,6 +2,12 @@
 
 Every version of Performance Booster and what it brought. Turkish: [CHANGELOG.tr.md](CHANGELOG.tr.md).
 
+## 1.0.2 - 2026-11-02
+
+### New
+- Start Performance Booster with Windows: now at the top of the Startup tab and in the tray menu. At sign-in the app starts in the tray, so game mode, the finer timer and update checks work from the start.
+- An (i) next to settings and cards explains them in more detail when you hover over it: what the setting does and when to pick which value. On the NVIDIA, power, graphics, scheduling, memory, input, network, network adapter and interrupt settings, and on the cards of the Live, Network, Game mode and Latency tabs.
+
 ## 1.0.1 - 2026-11-02
 
 ### Improved

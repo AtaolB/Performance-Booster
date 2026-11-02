@@ -13,6 +13,7 @@ public static partial class Catalog
         yield return new Tweak
         {
             Id = "nv.power", Category = nvidia, Title = T("Power management mode"), Impact = Impact.Medium, Applicable = present,
+            Info = T("The same setting as Power management mode in the NVIDIA Control Panel (Manage 3D settings, global). Normal and Adaptive let the card lower its clocks when a game is light, for example in menus or at an FPS limit; raising them again takes a moment, which shows up as uneven frame times. Prefer maximum performance holds the clocks while a game runs; it uses more power."),
             Description = T("Prefer maximum performance keeps the clocks up while a game runs, so frame times stay even; the card still slows down on the desktop."),
             Store = () => new NvidiaStore(NvApi.PowerManagementMode),
             Options = Fixed(Rec("max", T("Prefer maximum performance"), "1"), Opt("normal", T("Normal (driver default)"), null, "5"), Opt("adaptive", T("Adaptive"), "0")),
@@ -20,6 +21,7 @@ public static partial class Catalog
         yield return new Tweak
         {
             Id = "nv.latency", Category = nvidia, Title = T("Low latency mode"), Impact = Impact.Medium, Applicable = present,
+            Info = T("Normally the processor prepares a few frames ahead, so the graphics card never has to wait; every queued frame adds input lag. On allows only one frame in the queue. It helps most when the card runs near 100%; when the processor is the limit, it changes little. In games with NVIDIA Reflex, turn on Reflex in the game instead."),
             Description = T("On keeps the processor at most one frame ahead of the card: less input lag when the card is the limit. Games with Reflex use Reflex instead."),
             Store = () => new NvidiaStore(NvApi.PreRenderedFrames),
             Options = Fixed(Rec("on", T("On (1 frame)"), "1"), Opt("off", T("Off (the game decides)"), null, "0")),
@@ -27,6 +29,7 @@ public static partial class Catalog
         yield return new Tweak
         {
             Id = "nv.shader", Category = nvidia, Title = T("Shader cache size"), Impact = Impact.Low, Applicable = present,
+            Info = T("Shaders are the small programs that draw a game's effects. The driver compiles them for your card the first time they are needed and keeps them in a cache on the disk. When the cache is full the oldest are deleted, and the game has to compile them again, which shows up as stutter. Unlimited uses more disk space, usually a few GB."),
             Description = T("When the cache is full, old shaders are deleted and games stutter while compiling them again."),
             Store = () => new NvidiaStore(NvApi.ShaderCacheSize),
             Options = Fixed(Rec("unlimited", T("Unlimited"), "4294967295"), Opt("default", T("Driver default"), null), Opt("10", "10 GB", "10240"), Opt("100", "100 GB", "102400")),
@@ -34,6 +37,7 @@ public static partial class Catalog
         yield return new Tweak
         {
             Id = "nv.refresh", Category = nvidia, Title = T("Preferred refresh rate"), Impact = Impact.Low, Applicable = present,
+            Info = T("Some games, mostly older ones in exclusive fullscreen, set the display to 60 Hz even on a 144 Hz or faster monitor. Highest available makes the driver always use the display's highest refresh rate for games. The game decides follows what each game asks for."),
             Description = T("Highest available runs games at the display's highest refresh rate, also when a game asks for a lower one (some older games start at 60 Hz)."),
             Store = () => new NvidiaStore(NvApi.RefreshRateOverride),
             Options = Fixed(Rec("highest", T("Highest available"), "1"), Opt("app", T("The game decides (driver default)"), null, "0")),
@@ -49,6 +53,7 @@ public static partial class Catalog
     {
         string category = T("Interrupts (MSI)");
         string note = T("If the device stops working after the restart, choose Off (or Undo) and restart again.");
+        string info = T("When a device has work for the processor, it signals with an interrupt. With the old line-based method, several devices can share one line, and the processor has to check which of them called. With MSI (Message Signaled Interrupts) each device sends its own message. Many drivers use MSI already; Current shows which one is in use.");
         foreach (var device in PresentDevices().Where(InterruptRelevant))
         {
             string? description = device.ClassCode switch
@@ -63,7 +68,7 @@ public static partial class Catalog
             string instance = device.InstanceId;
             yield return new Tweak
             {
-                Id = "msi." + StableId(instance), Category = category, Title = device.Name, Description = description, Note = note,
+                Id = "msi." + StableId(instance), Category = category, Title = device.Name, Description = description, Note = note, Info = info,
                 Impact = device.ClassCode is "0300" or "0302" or "0380" ? Impact.Medium : Impact.Low,
                 Store = Single(new RegistryStore(RegistryHive.LocalMachine, () => Devices.Find(instance) is null ? null : Devices.MsiKey(instance), "MSISupported", RegistryValueKind.DWord)),
                 // Without the value the driver decides: the interrupts the device got tell which mode it runs in.

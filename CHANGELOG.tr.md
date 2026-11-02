@@ -2,6 +2,12 @@
 
 Performance Booster'ın her sürümü ve getirdikleri. English: [CHANGELOG.md](CHANGELOG.md).
 
+## 1.0.2 - 2026-11-02
+
+### Yeni
+- Performance Booster'ı Windows ile başlat: artık Başlangıç sekmesinin en üstünde ve tepsi menüsünde. Oturum açılınca uygulama tepside başlar; oyun modu, hassas zamanlayıcı ve güncelleme denetimleri baştan çalışır.
+- Ayarların ve kartların yanındaki (i) simgesinin üzerine gelince ayrıntılı açıklama görünür: ayarın ne yaptığı ve hangi değerin ne zaman seçileceği. NVIDIA, güç, grafik, zamanlama, bellek, giriş, ağ, ağ bağdaştırıcısı ve kesme ayarlarında, ayrıca Canlı, Ağ, Oyun modu ve Gecikme sekmelerindeki kartlarda.
+
 ## 1.0.1 - 2026-11-02
 
 ### İyileştirmeler

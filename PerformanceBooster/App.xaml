@@ -59,6 +59,23 @@
             <Setter Property="Foreground" Value="{StaticResource Sub}"/>
         </Style>
 
+        <!-- (i) next to a title or option: hovering shows the longer explanation set as its ToolTip. -->
+        <Style x:Key="InfoIcon" TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+            <Setter Property="Text" Value="&#xE946;"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="7,0,0,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Help"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="150"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+            <Setter Property="AutomationProperties.HelpText" Value="{Binding ToolTip, RelativeSource={RelativeSource Self}}"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="BigValue" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource Fg}"/>
             <Setter Property="FontFamily" Value="{StaticResource DisplayFont}"/>

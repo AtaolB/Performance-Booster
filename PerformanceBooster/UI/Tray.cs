@@ -13,6 +13,7 @@ public sealed class Tray : IDisposable
     public event Action? OpenRequested;
     public event Action? CheckUpdatesRequested;
     public event Action<bool>? GameModeToggled;
+    public event Action<bool>? AutoStartToggled;
     public event Action? ExitRequested;
 
     public Tray(bool gameMode)
@@ -31,9 +32,13 @@ public sealed class Tray : IDisposable
         check.Click += (_, _) => CheckUpdatesRequested?.Invoke();
         _gameMode = new WinForms.ToolStripMenuItem(T("Game mode")) { CheckOnClick = true, Checked = gameMode };
         _gameMode.CheckedChanged += (_, _) => GameModeToggled?.Invoke(_gameMode.Checked);
+        // Read when the menu opens (the window's check boxes can change it); Click, not CheckedChanged, so only a click changes it.
+        var autoStart = new WinForms.ToolStripMenuItem(T("Start with Windows")) { CheckOnClick = true };
+        autoStart.Click += (_, _) => AutoStartToggled?.Invoke(autoStart.Checked);
+        menu.Opening += (_, _) => autoStart.Checked = Core.AutoStart.Enabled;
         var exit = new WinForms.ToolStripMenuItem(T("Exit"));
         exit.Click += (_, _) => ExitRequested?.Invoke();
-        menu.Items.AddRange([open, check, _gameMode, new WinForms.ToolStripSeparator(), exit]);
+        menu.Items.AddRange([open, check, _gameMode, autoStart, new WinForms.ToolStripSeparator(), exit]);
         foreach (WinForms.ToolStripItem item in menu.Items) item.ForeColor = Color.FromArgb(0xE7, 0xEA, 0xF0);
 
         _icon = new WinForms.NotifyIcon

@@ -12,6 +12,8 @@ public sealed class TweakRow(Tweak tweak) : ObservableObject
     public string Description => Tweak.Description;
     public string? Note => Tweak.Note;
     public bool HasNote => !string.IsNullOrEmpty(Tweak.Note);
+    public string? Info => Tweak.Info;
+    public bool HasInfo => !string.IsNullOrEmpty(Tweak.Info);
     public string ImpactText => Tweak.Impact switch { Impact.High => T("high impact"), Impact.Medium => T("medium impact"), _ => T("low impact") };
     public Brush ImpactBrush => Tweak.Impact switch { Impact.High => Palette.Warn, Impact.Medium => Palette.Info, _ => Palette.Muted };
     public string Flags => string.Join(" · ", new[] { Tweak.NeedsReboot ? T("needs a restart") : null, Tweak.RestartsNic ? T("network drops for a few seconds") : null }.Where(x => x is not null));

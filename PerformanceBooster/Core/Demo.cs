@@ -54,7 +54,7 @@ public static class Demo
             var store = new DemoStore(pick.Value);
             list.Add(new Tweak
             {
-                Id = t.Id, Category = t.Category, Title = t.Title, Description = t.Description, Impact = t.Impact, Note = t.Note,
+                Id = t.Id, Category = t.Category, Title = t.Title, Description = t.Description, Impact = t.Impact, Note = t.Note, Info = t.Info,
                 Store = () => store, Options = () => options, RestartsNic = t.RestartsNic, NeedsReboot = t.NeedsReboot,
             });
         }

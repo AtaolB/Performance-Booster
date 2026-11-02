@@ -100,6 +100,7 @@ public partial class App : Application
         _tray.OpenRequested += ShowWindow;
         _tray.CheckUpdatesRequested += () => _ = vm.CheckAllUpdatesAsync();
         _tray.GameModeToggled += on => vm.GameBoost = on;
+        _tray.AutoStartToggled += on => vm.AutoStartEnabled = on;
         _tray.ExitRequested += ExitApp;
         vm.PropertyChanged += (_, p) =>
         {
