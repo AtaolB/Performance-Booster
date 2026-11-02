@@ -169,7 +169,7 @@ public sealed partial class MainViewModel
             _current?.Tick(DateTime.UtcNow);
             RaiseActivity();
         };
-        _updateTimer.Tick += async (_, _) => await CheckAllUpdatesAsync();
+        _updateTimer.Tick += async (_, _) => await CheckAllUpdatesUnlessGamingAsync();
         _updateTimer.Start();
         _ = FirstUpdateCheckAsync();
     }
@@ -177,6 +177,19 @@ public sealed partial class MainViewModel
     async Task FirstUpdateCheckAsync()
     {
         await Task.Delay(TimeSpan.FromSeconds(4)); // so it does not compete with the other startup work
+        await CheckAllUpdatesUnlessGamingAsync();
+    }
+
+    // The regular checks (winget, Windows Update) wait while a game runs and follow when it closes (RunDeferredChecks).
+    bool _updatesDeferred;
+
+    async Task CheckAllUpdatesUnlessGamingAsync()
+    {
+        if (_watcher.ActiveGame is not null)
+        {
+            _updatesDeferred = true;
+            return;
+        }
         await CheckAllUpdatesAsync();
     }
 

@@ -107,7 +107,7 @@ public sealed class GameWatcher
             var processes = ProcessSnapshot.Take();
             var skipNames = settings.Games.Select(g => Path.GetFileNameWithoutExtension(g) ?? "").Concat(settings.BackgroundExempt).Append(ActiveGame ?? "")
                 .Where(n => n.Length > 0).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var skipIds = processes.Where(p => p.ParentId == _gameId).Select(p => p.Id).Append(_gameId).ToHashSet(); // the game and what it started
+            var skipIds = GameTree(processes, _gameId);
             int limited = _limiter.Limit(processes.Where(p => BackgroundLimiter.IsCandidate(p, Session, Environment.ProcessId, skipNames, skipIds)).ToList(),
                 settings.BackgroundOffGameCores ? CpuTopology.Current?.BackgroundSets : null);
             if (limited > 0) notes.Add(F("{0} background app on low CPU|{0} background apps on low CPU", limited));
@@ -135,6 +135,23 @@ public sealed class GameWatcher
         else WifiScan.Resume();
 
         Status = _baseStatus + (notes.Count > 0 ? " · " + string.Join(", ", notes) : "");
+    }
+
+    // The game and every process it started, directly or through others. A child is younger than its parent, so an ID that a
+    // new process reused after the parent exited does not count.
+    internal static HashSet<int> GameTree(IReadOnlyList<ProcessInfo> processes, int gameId)
+    {
+        var tree = new HashSet<int> { gameId };
+        var children = processes.ToLookup(p => p.ParentId);
+        var created = processes.ToDictionary(p => p.Id, p => p.CreateTime);
+        var queue = new Queue<int>([gameId]);
+        while (queue.TryDequeue(out int parent))
+        {
+            long parentCreated = created.GetValueOrDefault(parent);
+            foreach (var child in children[parent])
+                if (child.CreateTime >= parentCreated && tree.Add(child.Id)) queue.Enqueue(child.Id);
+        }
+        return tree;
     }
 
     void StopCleaner()

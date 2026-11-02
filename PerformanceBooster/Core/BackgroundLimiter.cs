@@ -1,11 +1,13 @@
+using System.Collections.Frozen;
 using System.Runtime.InteropServices;
 
 namespace PerformanceBooster.Core;
 
 // While a game runs, the user's other apps get "Low" priority and Windows' efficiency mode (EcoQoS), the leaf icon in Task Manager:
 // they run only when the game leaves the processor free, and on hybrid processors they move to the efficiency cores.
-// Needs no administrator rights. Never touched: system processes, other users' processes, the game and the processes it started,
-// the exempt list (voice chat, streaming, overlays, anti-cheat) and apps that raised their own priority (audio tools, for example).
+// Needs no administrator rights. Never touched: system processes, other users' processes, the game and every process it started,
+// anti-cheat, overlays, voice chat and audio apps (AlwaysFullSpeed), the exempt list of the settings and apps that raised their own
+// priority (audio tools, for example).
 // Everything is put back when the game closes; the list is saved too, so a crash of the app does not leave apps slowed down.
 // With background cores given (CpuTopology), the limited apps also run only on those, so the game has its cores to itself.
 public sealed class BackgroundLimiter
@@ -21,8 +23,20 @@ public sealed class BackgroundLimiter
 
     public int Count => _limited.Count;
 
+    // Kept at full speed whatever the exempt list says: a game waits on its anti-cheat, and slowed overlays, voice chat and audio
+    // apps stutter or crackle.
+    public static readonly FrozenSet<string> AlwaysFullSpeed = new[]
+    {
+        "EasyAntiCheat", "EasyAntiCheat_EOS", "BEService", "FACEIT", "vgtray", "EAAntiCheat.GameServiceLauncher",
+        "steam", "steamwebhelper", "GameOverlayUI", "EOSOverlayRenderer-Win64-Shipping", "NVIDIA Overlay", "NVIDIA Share", "RTSS", "MSIAfterburner",
+        "GameBar", "GameBarFTServer",
+        "Discord", "DiscordPTB", "DiscordCanary", "ts3client_win64", "TeamSpeak", "Mumble",
+        "NVIDIA Broadcast", "voicemeeter", "voicemeeter_x64", "voicemeeterpro", "voicemeeterpro_x64", "voicemeeter8", "voicemeeter8x64",
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
     public static bool IsCandidate(ProcessInfo p, int session, int self, ISet<string> skipNames, ISet<int> skipIds) =>
-        p.SessionId == session && p.Id != self && p.Id > 4 && !skipIds.Contains(p.Id) && !skipNames.Contains(p.Name) && !ProcessSampler.IsProtected(p.Name);
+        p.SessionId == session && p.Id != self && p.Id > 4 && !skipIds.Contains(p.Id) && !skipNames.Contains(p.Name)
+        && !AlwaysFullSpeed.Contains(p.Name) && !ProcessSampler.IsProtected(p.Name);
 
     // Limits the given processes that are not limited yet. One no longer given (it exited, or was added to the exempt list
     // during the game) is put back. Returns how many are limited.

@@ -90,6 +90,27 @@ static class GameBoostTests
             Check.True(!Candidate(Proc(103, "explorer")) && !Candidate(Proc(104, "audiodg")) && !Candidate(Proc(4, "System")), "system processes");
             Check.True(!Candidate(Proc(105, "discord")) && !Candidate(Proc(106, "CS2")), "exempt list and games, case insensitive");
             Check.True(!Candidate(Proc(500, "cs2")) && !Candidate(Proc(501, "crashhandler")), "the game and what it started");
+            Check.True(!Candidate(Proc(107, "EasyAntiCheat")) && !Candidate(Proc(108, "steam")) && !Candidate(Proc(109, "NVIDIA Overlay")) && !Candidate(Proc(110, "TeamSpeak")),
+                "anti-cheat, overlays and voice chat, whatever the list says");
+        });
+
+        Runner.Test("Background apps: the game and everything it started are left alone (fake processes)", () =>
+        {
+            ProcessInfo P(int id, int parent, long created) => new(id, parent, "x", 1, created, 0, 0, 0, 0, 0, 0);
+            // 100 is the game, 200 its child, 300 a grandchild; 400 names 100 as parent but is older (an ID reused after another process exited).
+            var tree = GameWatcher.GameTree([P(100, 50, 1000), P(200, 100, 1100), P(300, 200, 1200), P(400, 100, 900), P(500, 60, 1300)], 100);
+            Check.Equal("100 200 300", string.Join(" ", tree.Order()), "the game, its child and grandchild");
+        });
+
+        Runner.Test("Settings of an earlier version: an empty keep list and the old RAM cleaner limit are upgraded", () =>
+        {
+            var old = new AppSettings { BackgroundExempt = [], FreeBelowMb = StandbyCleaner.HalfOfMemoryMb() };
+            Check.True(old.Upgrade(), "upgraded");
+            Check.True(old.BackgroundExempt.SequenceEqual(AppSettings.DefaultExempt), "the usual apps are back");
+            Check.Equal(StandbyCleaner.DefaultFreeBelowMb(), old.FreeBelowMb, "the new limit");
+            Check.True(!old.Upgrade(), "nothing more to do");
+            var chosen = new AppSettings { BackgroundExempt = ["Spotify"], FreeBelowMb = 3000 };
+            Check.True(!chosen.Upgrade() && chosen.FreeBelowMb == 3000 && chosen.BackgroundExempt.Count == 1, "values the user chose stay");
         });
 
         Runner.Test("Background apps: low priority and efficiency mode, then restored (fake process)", () =>
@@ -204,12 +225,14 @@ static class GameBoostTests
             double standby = 2048;
             int rounds = 0, purges = 0;
             var reports = new List<CleanerStatus>();
+            var lowPriority = new List<bool>();
             using var purgeNow = new AutoResetEvent(false);
             StandbyCleaner.Loop(
                 sample: () => new MemoryLists(standby, 500, 0, 16384),
-                purge: () =>
+                purge: lowPriorityOnly =>
                 {
                     purges++;
+                    lowPriority.Add(lowPriorityOnly);
                     standby = 0;
                     return 0;
                 },
@@ -222,8 +245,10 @@ static class GameBoostTests
                     standby = 100;
                     if (reports.Count == 2) purgeNow.Set(); // "Empty now" during the game
                 },
-                interval: TimeSpan.FromMilliseconds(10));
+                interval: TimeSpan.FromMilliseconds(10),
+                minGap: TimeSpan.Zero);
             Check.Equal(2, purges, "emptied by the rule, then when asked");
+            Check.Equal("True False", string.Join(" ", lowPriority), "the rule empties the low-priority part, Empty now all of it");
             Check.True(reports[0] is { Purges: 1, LastFreedMb: 2048, StandbyMb: 0, Running: true, Error: null }, "first report: " + reports[0]);
             Check.True(reports[1].Purges == 1 && reports[2].Purges == 2, "the small list is left alone until asked");
             Check.True(reports[^1] is { Running: false, Purges: 2 }, "stopped: " + reports[^1]);
@@ -231,9 +256,18 @@ static class GameBoostTests
             rounds = 0;
             standby = 2048;
             reports.Clear();
-            StandbyCleaner.Loop(() => new MemoryLists(standby, 500, 0, 16384), () => unchecked((int)0xC0000061), () => rounds++ < 1, purgeNow,
-                () => (1024, 1024), reports.Add, TimeSpan.FromMilliseconds(1));
+            StandbyCleaner.Loop(() => new MemoryLists(standby, 500, 0, 16384), _ => unchecked((int)0xC0000061), () => rounds++ < 1, purgeNow,
+                () => (1024, 1024), reports.Add, TimeSpan.FromMilliseconds(1), TimeSpan.Zero);
             Check.True(reports[0] is { Purges: 0, Error: not null } && reports[0].Error!.Contains("C0000061"), "refusal reported: " + reports[0].Error);
+
+            // The rule empties at most once in minGap; Empty now still works in between.
+            rounds = 0;
+            purges = 0;
+            reports.Clear();
+            using var later = new AutoResetEvent(false);
+            StandbyCleaner.Loop(() => new MemoryLists(4096, 500, 0, 16384), _ => { purges++; return 0; }, () => rounds++ < 3, later, () => (1024, 1024),
+                s => { reports.Add(s); if (reports.Count == 2) later.Set(); }, TimeSpan.FromMilliseconds(1), TimeSpan.FromHours(1));
+            Check.Equal(2, purges, "once by the rule in the hour, once when asked");
         });
 
         Runner.Test("RAM cleaner: scheduled task definition", () =>
@@ -270,7 +304,7 @@ static class GameBoostTests
             using var sampler = new MemorySampler();
             var m = sampler.Sample();
             Check.True(m.TotalMb > 1000 && m.FreeMb >= 0 && m.StandbyMb >= 0 && m.FreeMb + m.StandbyMb <= m.TotalMb + 1, $"lists: {m}");
-            Check.True(StandbyCleaner.DefaultFreeBelowMb() >= 1024 && StandbyCleaner.DefaultFreeBelowMb() <= m.TotalMb / 2 + 256, "half of the memory");
+            Check.True(StandbyCleaner.DefaultFreeBelowMb() is >= 512 and <= 2048, "free memory limit: 2 GB at most, " + StandbyCleaner.DefaultFreeBelowMb());
             Runner.Note($"standby {m.StandbyMb:0} MB · free {m.FreeMb:0} MB · modified {m.ModifiedMb:0} MB · total {m.TotalMb:0} MB");
             if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
                 Check.Skip("not running as administrator; emptying was not tried");

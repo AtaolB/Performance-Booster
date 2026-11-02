@@ -252,9 +252,16 @@ public sealed partial class MainViewModel
 
     // Windows turns power saving on again for a device plugged into a new port. Once it was turned off here (and not undone),
     // the app turns it off for the new device too, without asking, when it runs as administrator. Every 5 minutes.
+    bool _devicePowerDeferred;
+
     async Task KeepDevicePowerSavingOffAsync()
     {
         if (!Elevated.IsAdmin || Busy || Tweaks.FirstOrDefault(r => r.Id == "dev.powersaving") is not { HasBackup: true, CurrentKey: "on" }) return;
+        if (_watcher.ActiveGame is not null)
+        {
+            _devicePowerDeferred = true; // reading every device takes a moment; after the game (RunDeferredChecks)
+            return;
+        }
         try
         {
             bool changed = await Task.Run(() =>

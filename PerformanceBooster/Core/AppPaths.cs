@@ -108,7 +108,7 @@ public sealed class AppSettings
     static AppSettings? _current;
 
     // The app's single settings object: two copies must not write the same file and erase each other's changes.
-    public static AppSettings Current => _current ??= Load();
+    public static AppSettings Current => _current ??= Upgraded(Load());
 
     internal static void ResetCurrent() => _current = null;
 
@@ -118,6 +118,30 @@ public sealed class AppSettings
         var settings = AppPaths.ReadJson(AppPaths.Settings, AppJson.Default.AppSettings) ?? new AppSettings();
         settings.FromFile = exists;
         return settings;
+    }
+
+    static AppSettings Upgraded(AppSettings settings)
+    {
+        if (settings.FromFile && settings.Upgrade()) settings.Save();
+        return settings;
+    }
+
+    // Settings saved by an earlier version: an empty list of apps kept at full speed gets the usual apps back, and the RAM
+    // cleaner's earlier suggested limit (half of the memory) becomes the new one. Only the main app upgrades (Current).
+    internal bool Upgrade()
+    {
+        bool changed = false;
+        if (BackgroundExempt.Count == 0)
+        {
+            BackgroundExempt = [.. DefaultExempt];
+            changed = true;
+        }
+        if (FreeBelowMb == StandbyCleaner.HalfOfMemoryMb())
+        {
+            FreeBelowMb = StandbyCleaner.DefaultFreeBelowMb();
+            changed = true;
+        }
+        return changed;
     }
 
     public void Save()

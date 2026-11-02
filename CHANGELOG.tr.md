@@ -2,6 +2,13 @@
 
 Performance Booster'ın her sürümü ve getirdikleri. English: [CHANGELOG.md](CHANGELOG.md).
 
+## 1.0.1 - 2026-11-02
+
+### İyileştirmeler
+- Oyun modu: RAM temizleyici yalnızca boş bellek gerçekten azaldığında devreye girer (varsayılan 2 GB; önceki "belleğin yarısı" sınırı buna çevrilir), en fazla 5 dakikada bir çalışır ve yalnızca Windows'un en az ihtiyaç duyduğu önbelleği boşaltır; oyunlar yüklediklerini korur.
+- Oyun modu: hile koruması, katmanlar, sesli sohbet ve ses uygulamaları oyun sırasında her zaman tam hızda kalır, oyunun başlattığı her şey de öyle. Boş kalan "Tam hızda tut" listesine olağan uygulamalar geri gelir.
+- Oyun açıkken güncelleme denetimleri ve cihaz güç tasarrufu denetimi oyun kapanana kadar bekler; açık pencere işlem listelerini ve ayar denetimini duraklatır.
+
 ## 1.0.0 - 2026-11-01
 
 ### Yeni

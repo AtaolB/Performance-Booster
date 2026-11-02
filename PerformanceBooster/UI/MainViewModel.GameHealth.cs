@@ -94,6 +94,7 @@ public sealed partial class MainViewModel
         }
         if (_session is not { } ended) return;
         _session = null;
+        RunDeferredChecks();
         ended.End = DateTime.Now;
         _healthSampler?.Dispose();
         _healthSampler = null;
@@ -112,6 +113,21 @@ public sealed partial class MainViewModel
         ShowSession(ended, running: false);
         var findings = ended.Findings();
         if (findings.Count > 0) GameSessionEnded?.Invoke(ended, findings);
+    }
+
+    // After a game: the checks that waited for it.
+    void RunDeferredChecks()
+    {
+        if (_updatesDeferred)
+        {
+            _updatesDeferred = false;
+            _ = CheckAllUpdatesAsync();
+        }
+        if (_devicePowerDeferred)
+        {
+            _devicePowerDeferred = false;
+            _ = KeepDevicePowerSavingOffAsync();
+        }
     }
 
     void ShowSession(GameSession? s, bool running)

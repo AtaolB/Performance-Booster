@@ -42,15 +42,19 @@ public sealed class MemorySampler : IDisposable
     }
 }
 
-// Empties the standby list while a game runs: when the list is at least
-// StandbyAtLeastMb and free memory is below FreeBelowMb, checked every second.
+// Empties the standby list while a game runs: when the list is at least StandbyAtLeastMb and free memory is below FreeBelowMb,
+// checked every second. By that rule at most once in MinGap, and only the low-priority part of the list (the cached files Windows
+// is least likely to need again), so the game keeps the files it reads; "Empty now" empties the whole list.
 // Emptying needs administrator rights. A scheduled task created once (with one approval) starts the app as administrator with
 // --memory-cleaner when a game starts, without asking again; the main app signals it through two events in the user's session
 // (run, empty now) and the helper writes its state to cleaner-status.json. The helper exits when the game or the app closes.
 public static class StandbyCleaner
 {
     public const string TaskName = "PerformanceBooster Memory Cleaner";
-    const int SystemMemoryListInformation = 0x50, MemoryPurgeStandbyList = 4;
+    const int SystemMemoryListInformation = 0x50, MemoryPurgeStandbyList = 4, MemoryPurgeLowPriorityStandbyList = 5;
+
+    // Each emptying costs the game cached files it may need again, so the rule empties at most once in this time.
+    internal static readonly TimeSpan MinGap = TimeSpan.FromMinutes(5);
 
     internal static string StatusFile => Path.Combine(AppPaths.Folder, "cleaner-status.json");
     internal static string RunEvent => AppPaths.LocalName("Cleaner.Run");
@@ -65,8 +69,16 @@ public static class StandbyCleaner
 
     public static bool ShouldPurge(MemoryLists m, int standbyAtLeastMb, int freeBelowMb) => m.StandbyMb >= standbyAtLeastMb && m.FreeMb < freeBelowMb;
 
-    // Half of the memory is a good free memory limit.
+    // 2 GB (a quarter of the memory on smaller computers): Windows reuses cached files by itself as memory fills up, so emptying
+    // is only worth it when free memory is really low.
     public static int DefaultFreeBelowMb()
+    {
+        double totalMb = SystemInfo.Memory().TotalGb * 1024;
+        return totalMb <= 0 ? 2048 : Math.Clamp((int)(totalMb / 4 / 256) * 256, 512, 2048);
+    }
+
+    // The limit earlier versions suggested (half of the memory); settings that still have it get the new one (AppSettings.Upgrade).
+    internal static int HalfOfMemoryMb()
     {
         double totalMb = SystemInfo.Memory().TotalGb * 1024;
         return totalMb <= 0 ? 4096 : Math.Max(1024, (int)(totalMb / 2 / 256) * 256);
@@ -83,18 +95,20 @@ public static class StandbyCleaner
     // --- Emptying (administrator) ---
 
     // NTSTATUS: 0 = done; 0xC0000061 = the privilege is missing (not running as administrator).
-    internal static int PurgeStandbyList()
+    // lowPriorityOnly: only the pages Windows rates least likely to be needed again; the rest of the cache stays.
+    internal static int PurgeStandbyList(bool lowPriorityOnly = false)
     {
         if (!Privilege.Enable("SeProfileSingleProcessPrivilege")) return unchecked((int)0xC0000061);
-        int command = MemoryPurgeStandbyList;
+        int command = lowPriorityOnly ? MemoryPurgeLowPriorityStandbyList : MemoryPurgeStandbyList;
         return Native.NtSetSystemInformation(SystemMemoryListInformation, ref command, sizeof(int));
     }
 
     static string Refused(int status) => F("Windows refused to empty the standby list (0x{0:X8}).", status);
 
-    // The cleaner's loop: purges when the rule holds or when asked, reports every round. Exits when keepRunning turns false.
-    internal static void Loop(Func<MemoryLists> sample, Func<int> purge, Func<bool> keepRunning, WaitHandle purgeNow,
-        Func<(int StandbyAtLeastMb, int FreeBelowMb)> limits, Action<CleanerStatus> report, TimeSpan interval, CleanerStatus? previous = null)
+    // The cleaner's loop: by the rule (at most once in minGap) it empties the low-priority part of the list, when asked all of it;
+    // reports every round. Exits when keepRunning turns false. purge(true): the low-priority part only.
+    internal static void Loop(Func<MemoryLists> sample, Func<bool, int> purge, Func<bool> keepRunning, WaitHandle purgeNow,
+        Func<(int StandbyAtLeastMb, int FreeBelowMb)> limits, Action<CleanerStatus> report, TimeSpan interval, TimeSpan minGap, CleanerStatus? previous = null)
     {
         int purges = previous?.Purges ?? 0;
         DateTime? last = previous?.LastPurge;
@@ -106,9 +120,10 @@ public static class StandbyCleaner
         {
             m = sample();
             var (atLeast, below) = limits();
-            if (asked || ShouldPurge(m, atLeast, below))
+            bool due = ShouldPurge(m, atLeast, below) && (last is not { } at || DateTime.Now - at >= minGap);
+            if (asked || due)
             {
-                int status = purge();
+                int status = purge(!asked);
                 if (status == 0)
                 {
                     var after = sample();
@@ -146,7 +161,7 @@ public static class StandbyCleaner
                 using var purgeNow = EventWaitHandle.TryOpenExisting(PurgeEvent, out var asked) ? asked : new EventWaitHandle(false, EventResetMode.AutoReset);
                 var settings = new SettingsFile();
                 Loop(sampler.Sample, PurgeStandbyList, () => run.WaitOne(0) && MainAppRunning() && settings.Current.CleanStandby, purgeNow,
-                    () => (settings.Current.StandbyAtLeastMb, settings.Current.FreeBelowMb), WriteStatus, TimeSpan.FromSeconds(1), previous);
+                    () => (settings.Current.StandbyAtLeastMb, settings.Current.FreeBelowMb), WriteStatus, TimeSpan.FromSeconds(1), MinGap, previous);
             }
             return 0;
         }
@@ -241,7 +256,7 @@ public static class StandbyCleaner
     {
         using var sampler = new MemorySampler();
         Loop(sampler.Sample, PurgeStandbyList, () => run.WaitOne(0) && settings.CleanStandby, purgeNow,
-            () => (settings.StandbyAtLeastMb, settings.FreeBelowMb), WriteStatus, TimeSpan.FromSeconds(1), ReadStatus());
+            () => (settings.StandbyAtLeastMb, settings.FreeBelowMb), WriteStatus, TimeSpan.FromSeconds(1), MinGap, ReadStatus());
     }
 }
 

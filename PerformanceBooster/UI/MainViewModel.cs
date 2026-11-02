@@ -218,17 +218,27 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var row in Pings) _ = row.SampleAsync();
 
         // The process lists are expensive: the full one only while its tab is open, the top users when needed for a RAM/CPU warning.
-        if (SelectedTab == TabProcesses && _tick % 2 == 0) _ = RefreshProcessManagerAsync();
-        if ((_ramPercent >= 85 || cpu >= 90) && _tick % 3 == 0) _ = RefreshProcessesAsync();
-        if (_tick % 30 == 0) _ = RefreshTweaksAsync();
+        // While a game runs, they and the regular settings check wait, so an open window costs the game nothing.
+        bool gaming = _watcher.ActiveGame is not null;
+        if (gaming && SelectedTab == TabProcesses) ProcessSummary = PausedText;
+        if (!gaming && SelectedTab == TabProcesses && _tick % 2 == 0) _ = RefreshProcessManagerAsync();
+        if (!gaming && (_ramPercent >= 85 || cpu >= 90) && _tick % 3 == 0) _ = RefreshProcessesAsync();
+        if (!gaming && _tick % 30 == 0) _ = RefreshTweaksAsync();
         if (SelectedTab == TabGame) RefreshGameBoost();
         if (HasDetail && SelectedTab == TabLive && _tick % 2 == 0)
         {
-            if (IsDetailNet) RaiseNetMonitorState();
-            _ = RefreshDetailAsync();
+            if (gaming) DetailNote = PausedText;
+            else
+            {
+                if (DetailNote == PausedText && Detail is { } kind) DetailNote = Note(kind);
+                if (IsDetailNet) RaiseNetMonitorState();
+                _ = RefreshDetailAsync();
+            }
         }
         UpdateIssues();
     }
+
+    static string PausedText => T("Paused while a game runs.");
 
     void UpdateGpu(Core.CounterSample counters)
     {

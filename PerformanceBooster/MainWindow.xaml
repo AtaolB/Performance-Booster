@@ -1135,7 +1135,7 @@
                                     <TextBlock Text="{ui:T 'GAMES AND APPS'}" Style="{StaticResource CardTitle}"/>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,8,0,12"
-                                           Text="{ui:T 'A game starts game mode and is never slowed down. Apps marked Keep at full speed (voice chat, streaming, overlays, anti-cheat) are not slowed down while a game runs either.'}"/>
+                                           Text="{ui:T 'A game starts game mode and is never slowed down, nor is anything it starts. Apps marked Keep at full speed are not slowed down while a game runs either; anti-cheat, overlays, voice chat and audio apps never are.'}"/>
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -1258,7 +1258,7 @@
                                                Text="{ui:T 'While a game runs, the other apps get low priority and Windows efficiency mode (the leaf in Task Manager): they use the processor only when the game leaves it free. Restored when the game closes. System processes and apps that raised their own priority are not touched.'}"/>
                                     <CheckBox Content="{ui:T 'Keep background apps on low CPU while a game runs'}" IsChecked="{Binding LimitBackground}"/>
                                     <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="27,4,0,0"
-                                               Text="{ui:T 'Games and the apps marked Keep at full speed in the Games and apps list are never slowed down.'}"/>
+                                               Text="{ui:T 'Games, everything they start, the apps marked Keep at full speed in the Games and apps list, and anti-cheat, overlay, voice chat and audio apps are never slowed down.'}"/>
                                     <StackPanel Visibility="{Binding ShowCoreSplit, Converter={StaticResource BoolToVis}}" Margin="0,12,0,0">
                                         <CheckBox Content="{ui:T 'Keep them off the game\'s cores'}" IsChecked="{Binding BackgroundOffGameCores}" IsEnabled="{Binding LimitBackground}"/>
                                         <TextBlock Text="{Binding CoreSplitText}" Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="27,4,0,0"/>
@@ -1328,7 +1328,7 @@
                                     <TextBlock Grid.Row="1" Grid.Column="2" Text="MB" Style="{StaticResource SubText}" VerticalAlignment="Center"/>
                                 </Grid>
                                 <TextBlock Style="{StaticResource SubText}" TextWrapping="Wrap" Margin="0,4,0,12"
-                                           Text="{ui:T 'Checked every second. Half of the memory is a good free memory limit.'}"/>
+                                           Text="{ui:T 'Checked every second; emptied at most once every 5 minutes, and only the cached files Windows needs least. 2 GB is a good free memory limit.'}"/>
                                 <Border Background="{StaticResource CardAlt}" CornerRadius="10" Padding="13,10" Margin="0,0,0,12">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE9D9;" Style="{StaticResource Icon}" Margin="0,0,10,0"/>

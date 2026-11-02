@@ -2,6 +2,13 @@
 
 Every version of Performance Booster and what it brought. Turkish: [CHANGELOG.tr.md](CHANGELOG.tr.md).
 
+## 1.0.1 - 2026-11-02
+
+### Improved
+- Game mode: the RAM cleaner steps in only when free memory is really low (2 GB by default; the earlier limit of half the memory is changed to it), at most once every 5 minutes, and clears only the cached files Windows needs least, so games keep what they have loaded.
+- Game mode: anti-cheat, overlays, voice chat and audio apps always keep full speed while a game runs, and so does everything the game starts. An empty "Keep at full speed" list gets the usual apps back.
+- While a game runs, update checks and the device power saving check wait until it closes, and an open window pauses its process lists and settings check.
+
 ## 1.0.0 - 2026-11-01
 
 ### New
